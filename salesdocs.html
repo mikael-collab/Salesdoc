@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>SalesDocs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --navy:   #1B2B4B;
+    --dark:   #0F1C32;
+    --amber:  #E8A020;
+    --amberL: #F5C056;
+    --cream:  #FAF8F3;
+    --white:  #FFFFFF;
+    --gray:   #6B7A99;
+    --border: #DDE3EE;
+    --green:  #16A34A;
+    --red:    #DC2626;
+  }
+  html, body { margin: 0; padding: 0; background: var(--cream); font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+
+  /* ── Screens ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Config Screen ── */
+  .config-hero {
+    background: linear-gradient(150deg, var(--navy), var(--dark));
+    padding: 48px 24px 38px;
+    color: var(--white);
+  }
+  .config-hero .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .config-hero .brand span { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; }
+  .config-hero h1 { font-size: 27px; font-weight: 300; line-height: 1.35; margin: 0; }
+  .config-hero h1 strong { font-weight: 700; }
+  .config-hero p { color: rgba(255,255,255,.5); font-size: 13px; margin: 8px 0 0; }
+
+  .config-body { padding: 24px 18px 40px; }
+
+  .card { background: var(--white); border-radius: 16px; padding: 22px 18px; box-shadow: 0 2px 16px rgba(27,43,75,.09); margin-bottom: 14px; }
+  .card-title { font-size: 12px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 18px; }
+
+  label.field-label { display: block; font-size: 11px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+
+  input[type=text], input[type=url], input[type=email], input[type=tel], input[type=number], input[type=date], textarea {
+    width: 100%; display: block; padding: 12px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 15px; color: var(--navy); background: var(--white);
+    font-family: 'DM Sans', sans-serif; outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, textarea:focus { border-color: var(--amber); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .field-group { margin-bottom: 16px; }
+
+  .btn-primary {
+    display: block; width: 100%; padding: 15px;
+    background: var(--navy); color: var(--white);
+    border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: .02em;
+    transition: background .15s;
+  }
+  .btn-primary:hover { background: #243B62; }
+
+  .btn-secondary {
+    display: block; width: 100%; padding: 14px;
+    background: transparent; color: var(--navy);
+    border: 2px solid var(--border); border-radius: 12px; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: border-color .15s;
+  }
+  .btn-secondary:hover { border-color: var(--navy); }
+
+  .error-box {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 18px; color: var(--red); font-size: 13px; line-height: 1.5;
+  }
+
+  details { margin-top: 22px; }
+  details summary { font-size: 13px; color: var(--gray); cursor: pointer; font-weight: 500; user-select: none; }
+  .setup-guide {
+    font-size: 12px; color: var(--gray); margin-top: 10px; line-height: 1.9;
+    padding: 14px 16px; background: var(--white); border-radius: 12px; border: 1px solid var(--border);
+  }
+  .setup-guide a { color: var(--amber); }
+
+  /* ── Loading Screen ── */
+  #screen-loading {
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; min-height: 100vh;
+  }
+  #screen-loading.active { display: flex; }
+  .spinner {
+    width: 46px; height: 46px;
+    border: 3px solid var(--border); border-top-color: var(--navy);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── App Screen ── */
+  #screen-app { display: none; flex-direction: column; min-height: 100vh; }
+  #screen-app.active { display: flex; }
+
+  .app-header { background: var(--navy); position: sticky; top: 0; z-index: 100; }
+
+  .header-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px 10px;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-meta { font-size: 10px; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .1em; }
+  .header-name { color: var(--white); font-weight: 600; font-size: 14px; margin-top: 2px; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .progress-label { text-align: right; }
+  .progress-pct { color: var(--amber); font-weight: 700; font-size: 14px; }
+  .progress-sub { color: rgba(255,255,255,.35); font-size: 10px; }
+  .btn-close {
+    background: rgba(255,255,255,.1); border: none; border-radius: 8px;
+    color: rgba(255,255,255,.7); padding: 6px 10px; font-size: 12px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+
+  .progress-track { height: 2px; background: rgba(255,255,255,.08); }
+  .progress-fill  { height: 100%; background: linear-gradient(90deg, var(--amber), var(--amberL)); transition: width .4s ease; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; overflow-x: auto; scrollbar-width: none; padding: 0 6px; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: rgba(255,255,255,.4); font-weight: 400; font-size: 13px;
+    padding: 10px 14px 8px; cursor: pointer; white-space: nowrap;
+    font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: all .15s;
+  }
+  .tab-btn.active { color: var(--amber); font-weight: 600; border-bottom-color: var(--amber); }
+  .tab-mini-bar { width: 24px; height: 2px; background: rgba(255,255,255,.15); border-radius: 1px; overflow: hidden; }
+  .tab-mini-fill { height: 100%; border-radius: 1px; transition: width .3s; }
+
+  /* Form */
+  .form-body { flex: 1; padding: 20px 16px 48px; overflow-y: auto; }
+
+  .section-header { margin-top: 28px; margin-bottom: 14px; }
+  .section-header:first-child { margin-top: 4px; }
+  .section-header-inner { display: flex; align-items: center; gap: 8px; }
+  .section-accent { width: 3px; height: 22px; background: var(--amber); border-radius: 2px; flex-shrink: 0; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; color: var(--navy); }
+  .section-divider { height: 1px; background: var(--border); margin-top: 10px; }
+
+  .form-field { margin-bottom: 18px; }
+  .form-field-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .save-indicator { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
+  .mini-spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin .7s linear infinite; }
+
+  .complete-banner {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px;
+    padding: 20px; margin-top: 10px; text-align: center;
+  }
+  .complete-banner .icon { font-size: 28px; margin-bottom: 6px; }
+  .complete-banner .title { font-weight: 700; color: #166534; font-size: 16px; }
+  .complete-banner .sub   { color: #16a34a; font-size: 13px; margin-top: 4px; }
+
+  /* Demo badge */
+  .demo-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(232,160,32,.15); color: var(--amber); border: 1px solid rgba(232,160,32,.3);
+    border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600;
+    margin: 0 18px 14px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════════════════════════════════ CONFIG SCREEN ═══════════════════ -->
+  <div id="screen-config" class="screen active">
+    <div class="config-hero">
+      <div class="brand">
+        <svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#E8A020"/><rect x="7" y="9" width="18" height="2.5" rx="1.25" fill="white"/><rect x="7" y="14.75" width="12" height="2.5" rx="1.25" fill="white"/><rect x="7" y="20.5" width="15" height="2.5" rx="1.25" fill="white"/></svg>
+        <span>SalesDocs</span>
+      </div>
+      <h1>Fill legal forms on the go.<br /><strong>Syncs to Google Sheets.</strong></h1>
+      <p>Your dedicated sheet, always accessible from your phone.</p>
+    </div>
+
+    <div class="config-body">
+      <div id="config-error" class="error-box" style="display:none"></div>
+
+      <div class="card">
+        <div class="card-title">🔗 Connect Your Sheet</div>
+
+        <div class="field-group">
+          <label class="field-label" for="inp-clientid">Google OAuth Client ID</label>
+          <input type="text" id="inp-clientid" placeholder="xxxx.apps.googleusercontent.com" />
+        </div>
+
+        <div class="field-group" style="margin-bottom:20px">
+          <label class="field-label" for="inp-sheeturl">Your Google Sheet URL</label>
+          <input type="url" id="inp-sheeturl" placeholder="https://docs.google.com/spreadsheets/d/…" />
+        </div>
+
+        <button class="btn-primary" onclick="signIn()">Sign in with Google →</button>
+      </div>
+
+      <button class="btn-secondary" onclick="launchDemo()" style="margin-bottom:0">
+        Try Demo (no account needed)
+      </button>
+
+      <details>
+        <summary>📖 How to set up &amp; deploy this app</summary>
+        <div class="setup-guide">
+          <strong>Sheet format expected:</strong><br />
+          • Column A = Field labels (e.g. "Client Name:")<br />
+          • Column B = Values (editable by salesperson)<br />
+          • Empty B cell + short A text = section header<br />
+          • Each sheet tab becomes a navigation tab in the app<br /><br />
+
+          <strong>Google Cloud setup:</strong><br />
+          1. Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br />
+          2. Create a project → enable <strong>Google Sheets API</strong><br />
+          3. Credentials → Create <strong>OAuth 2.0 Client ID</strong> → type: <em>Web Application</em><br />
+          4. Add your hosted URL to <em>Authorized JavaScript Origins</em><br />
+          5. Copy the Client ID into the field above<br /><br />
+
+          <strong>Per salesperson setup:</strong><br />
+          • Share their sheet with their Google account<br />
+          • They open the app, paste their sheet URL, sign in<br />
+          • Their settings are saved on the device for next time<br /><br />
+
+          <strong>Hosting:</strong> Host this HTML file on any web server, GitHub Pages, or Netlify. It requires no backend.
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ LOADING SCREEN ══════════════════ -->
+  <div id="screen-loading" class="screen">
+    <div class="spinner"></div>
+    <p style="color:var(--gray);font-size:15px;margin:0">Loading your sheet…</p>
+  </div>
+
+  <!-- ═══════════════════════════════════ APP SCREEN ══════════════════════ -->
+  <div id="screen-app" class="screen">
+    <!-- Sticky header -->
+    <div class="app-header">
+      <div class="header-topbar">
+        <div class="header-left">
+          <svg width="30" height="30" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#E8A020"/><rect x="7" y="9" width="18" height="2.5" rx="1.25" fill="white"/><rect x="7" y="14.75" width="12" height="2.5" rx="1.25" fill="white"/><rect x="7" y="20.5" width="15" height="2.5" rx="1.25" fill="white"/></svg>
+          <div>
+            <div class="header-meta" id="header-mode">Live · Auto-saving</div>
+            <div class="header-name" id="header-name">Loading…</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="progress-label">
+            <div class="progress-pct" id="header-pct">0%</div>
+            <div class="progress-sub">complete</div>
+          </div>
+          <button class="btn-close" onclick="goBack()">✕</button>
+        </div>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" id="header-progress-fill" style="width:0%"></div>
+      </div>
+
+      <div class="tab-bar" id="tab-bar"></div>
+    </div>
+
+    <!-- Demo badge -->
+    <div id="demo-badge" class="demo-badge" style="display:none;margin-top:14px">
+      <span>👁</span> Demo Mode — changes are not saved
+    </div>
+
+    <!-- Form -->
+    <div class="form-body" id="form-body"></div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   SALESDOCS — Google Sheets Mobile Form App
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const DEMO_DATA = {
+  id: 'demo',
+  name: 'John Smith — Sales Form (Demo)',
+  sheets: [
+    {
+      name: 'Client Info',
+      fields: [
+        { type:'header', label:'Client Details' },
+        { type:'field',  label:'Full Name',        value:'', cell:'B2',  inputType:'text'     },
+        { type:'field',  label:'ID / Tax Number',  value:'', cell:'B3',  inputType:'text'     },
+        { type:'field',  label:'Date of Birth',    value:'', cell:'B4',  inputType:'date'     },
+        { type:'field',  label:'Email Address',    value:'', cell:'B5',  inputType:'email'    },
+        { type:'field',  label:'Phone Number',     value:'', cell:'B6',  inputType:'tel'      },
+        { type:'header', label:'Address' },
+        { type:'field',  label:'Street & Number',  value:'', cell:'B8',  inputType:'textarea' },
+        { type:'field',  label:'City',             value:'', cell:'B9',  inputType:'text'     },
+        { type:'field',  label:'State / Region',   value:'', cell:'B10', inputType:'text'     },
+        { type:'field',  label:'ZIP Code',         value:'', cell:'B11', inputType:'text'     },
+        { type:'field',  label:'Country',          value:'', cell:'B12', inputType:'text'     },
+      ]
+    },
+    {
+      name: 'Deal',
+      fields: [
+        { type:'header', label:'Contract Details' },
+        { type:'field',  label:'Product / Service',  value:'', cell:'B2', inputType:'text'     },
+        { type:'field',  label:'Contract Value ($)',  value:'', cell:'B3', inputType:'number'   },
+        { type:'field',  label:'Discount (%)',        value:'', cell:'B4', inputType:'number'   },
+        { type:'field',  label:'Payment Terms',       value:'', cell:'B5', inputType:'text'     },
+        { type:'field',  label:'Payment Method',      value:'', cell:'B6', inputType:'text'     },
+        { type:'field',  label:'Start Date',          value:'', cell:'B7', inputType:'date'     },
+        { type:'field',  label:'End Date',            value:'', cell:'B8', inputType:'date'     },
+        { type:'header', label:'Notes' },
+        { type:'field',  label:'Special Conditions',  value:'', cell:'B10', inputType:'textarea' },
+        { type:'field',  label:'Referred By',         value:'', cell:'B11', inputType:'text'    },
+      ]
+    },
+    {
+      name: 'Legal',
+      fields: [
+        { type:'header', label:'Legal Documents' },
+        { type:'field',  label:'Contract Type',     value:'', cell:'B2', inputType:'text'     },
+        { type:'field',  label:'Guarantor Name',    value:'', cell:'B3', inputType:'text'     },
+        { type:'field',  label:'Guarantor ID',      value:'', cell:'B4', inputType:'text'     },
+        { type:'field',  label:'Guarantor Phone',   value:'', cell:'B5', inputType:'tel'      },
+        { type:'field',  label:'Signature Date',    value:'', cell:'B6', inputType:'date'     },
+        { type:'header', label:'Internal' },
+        { type:'field',  label:'Accountant Notes',  value:'', cell:'B8', inputType:'textarea' },
+        { type:'field',  label:'Status',            value:'Pending Review', cell:'B9', inputType:'text' },
+      ]
+    },
+  ]
+};
+
+/* ── State ───────────────────────────────────────────────────────────────── */
+let state = {
+  token:      null,
+  spreadsheet: null,
+  activeTab:  0,
+  isDemo:     false,
+  vals:       {},      // key: `${sheetIdx}:${fieldIdx}` → string value
+  saving:     new Set(),
+  saved:      new Set(),
+};
+const saveTimers = {};
+
+/* ── Screen helpers ──────────────────────────────────────────────────────── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function showError(msg) {
+  const el = document.getElementById('config-error');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function parseSheetId(url) {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : url.trim();
+}
+
+function detectInputType(label) {
+  const l = label.toLowerCase();
+  if (/email/.test(l))                                    return 'email';
+  if (/phone|mobile|tel|fax/.test(l))                    return 'tel';
+  if (/\bdate\b|born/.test(l))                           return 'date';
+  if (/amount|price|cost|value|salary|total|fee|sum|discount/.test(l)) return 'number';
+  if (/note|comment|condition|address|street|description|remark/.test(l)) return 'textarea';
+  return 'text';
+}
+
+function isHeaderRow(row) {
+  const a = (row[0] || '').trim();
+  const b = (row[1] || '').trim();
+  return a && !b && !a.endsWith(':') && !a.endsWith('?') && a.length < 60;
+}
+
+function buildVals(sheets) {
+  const v = {};
+  sheets.forEach((sh, si) =>
+    sh.fields.forEach((f, fi) => {
+      if (f.type === 'field') v[`${si}:${fi}`] = f.value || '';
+    })
+  );
+  return v;
+}
+
+function calcProgress(sheetIdx) {
+  const sh = state.spreadsheet.sheets[sheetIdx];
+  if (!sh) return { pct: 0, filled: 0, total: 0 };
+  const fields = sh.fields.filter(f => f.type === 'field');
+  const filled = fields.filter((f, i) => {
+    const realIdx = sh.fields.indexOf(f);
+    return !!state.vals[`${sheetIdx}:${realIdx}`];
+  }).length;
+  const pct = fields.length > 0 ? Math.round(filled / fields.length * 100) : 0;
+  return { pct, filled, total: fields.length };
+}
+
+/* ── Google OAuth ────────────────────────────────────────────────────────── */
+let tokenClient = null;
+
+function signIn() {
+  const clientId = document.getElementById('inp-clientid').value.trim();
+  const sheetUrl = document.getElementById('inp-sheeturl').value.trim();
+  showError('');
+
+  if (!clientId) { showError('Please enter your Google Client ID.'); return; }
+  if (!sheetUrl) { showError('Please enter your Google Sheet URL.'); return; }
+  if (!window.google) { showError('Google sign-in not yet loaded. Please wait a moment and try again.'); return; }
+
+  // Save to localStorage for next visit
+  try { localStorage.setItem('sd_clientId', clientId); localStorage.setItem('sd_sheetUrl', sheetUrl); } catch {}
+
+  tokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    callback: async (resp) => {
+      if (resp.error) { showError('Sign-in failed: ' + resp.error); return; }
+      state.token = resp.access_token;
+      showScreen('loading');
+      await loadSheet(resp.access_token, parseSheetId(sheetUrl));
+    },
+  });
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+/* ── Load Sheet from Sheets API ──────────────────────────────────────────── */
+async function loadSheet(tok, id) {
+  try {
+    const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}`, {
+      headers: { Authorization: `Bearer ${tok}` }
+    });
+    if (!metaRes.ok) throw new Error('Cannot access spreadsheet. Check that it is shared with your Google account.');
+    const meta = await metaRes.json();
+
+    const sheets = await Promise.all(
+      meta.sheets.map(async ({ properties: { title: name } }) => {
+        const res  = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(name)}!A:C`,
+          { headers: { Authorization: `Bearer ${tok}` } }
+        );
+        const data = await res.json();
+        const rows = data.values || [];
+        const fields = [];
+        rows.forEach((row, idx) => {
+          const a = (row[0] || '').trim();
+          if (!a) return;
+          if (isHeaderRow(row)) {
+            fields.push({ type: 'header', label: a });
+          } else {
+            const label = a.replace(/:$/, '').trim();
+            fields.push({
+              type: 'field',
+              label,
+              value: (row[1] || '').trim(),
+              cell: `B${idx + 1}`,
+              inputType: detectInputType(label),
+            });
+          }
+        });
+        return { name, fields };
+      })
+    );
+
+    launchApp({ id, name: meta.properties.title, sheets }, false);
+  } catch (e) {
+    showError(e.message);
+    showScreen('config');
+  }
+}
+
+/* ── Demo Mode ───────────────────────────────────────────────────────────── */
+function launchDemo() {
+  launchApp(JSON.parse(JSON.stringify(DEMO_DATA)), true);
+}
+
+/* ── Launch App ──────────────────────────────────────────────────────────── */
+function launchApp(spreadsheet, isDemo) {
+  state.spreadsheet = spreadsheet;
+  state.isDemo      = isDemo;
+  state.activeTab   = 0;
+  state.vals        = buildVals(spreadsheet.sheets);
+  state.saving      = new Set();
+  state.saved       = new Set();
+
+  document.getElementById('header-name').textContent = spreadsheet.name;
+  document.getElementById('header-mode').textContent = isDemo ? 'Demo Mode' : 'Live · Auto-saving';
+  document.getElementById('demo-badge').style.display = isDemo ? 'flex' : 'none';
+
+  buildTabBar();
+  renderForm(0);
+  showScreen('app');
+}
+
+/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
+function buildTabBar() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  state.spreadsheet.sheets.forEach((sh, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.setAttribute('data-tab', i);
+    btn.onclick = () => switchTab(i);
+
+    const nameEl = document.createElement('span');
+    nameEl.textContent = sh.name;
+    btn.appendChild(nameEl);
+
+    const miniBar = document.createElement('div');
+    miniBar.className = 'tab-mini-bar';
+    const miniFill = document.createElement('div');
+    miniFill.className = 'tab-mini-fill';
+    miniFill.id = `tab-fill-${i}`;
+    miniBar.appendChild(miniFill);
+    btn.appendChild(miniBar);
+
+    bar.appendChild(btn);
+  });
+  updateAllTabProgress();
+}
+
+function switchTab(idx) {
+  state.activeTab = idx;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  renderForm(idx);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateAllTabProgress() {
+  state.spreadsheet.sheets.forEach((_, i) => {
+    const { pct } = calcProgress(i);
+    const fill = document.getElementById(`tab-fill-${i}`);
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.style.background = pct === 100 ? 'var(--green)' : 'var(--amber)';
+    }
+  });
+}
+
+/* ── Render Form ─────────────────────────────────────────────────────────── */
+function renderForm(tabIdx) {
+  const sh   = state.spreadsheet.sheets[tabIdx];
+  const body = document.getElementById('form-body');
+  body.innerHTML = '';
+
+  sh.fields.forEach((field, fi) => {
+    if (field.type === 'header') {
+      const sec = document.createElement('div');
+      sec.className = 'section-header';
+      sec.innerHTML = `
+        <div class="section-header-inner">
+          <div class="section-accent"></div>
+          <div class="section-title">${escHtml(field.label)}</div>
+        </div>
+        <div class="section-divider"></div>`;
+      body.appendChild(sec);
+      return;
+    }
+
+    const vk = `${tabIdx}:${fi}`;
+    const div = document.createElement('div');
+    div.className = 'form-field';
+    div.id = `field-${tabIdx}-${fi}`;
+
+    const indId = `ind-${tabIdx}-${fi}`;
+    const inpId = `inp-${tabIdx}-${fi}`;
+
+    div.innerHTML = `
+      <div class="form-field-top">
+        <label class="field-label" for="${inpId}">${escHtml(field.label)}</label>
+        <div class="save-indicator" id="${indId}"></div>
+      </div>
+    `;
+
+    let input;
+    if (field.inputType === 'textarea') {
+      input = document.createElement('textarea');
+      input.rows = 3;
+    } else {
+      input = document.createElement('input');
+      input.type = field.inputType;
+    }
+    input.id    = inpId;
+    input.value = state.vals[vk] || '';
+    if (field.inputType !== 'date') input.placeholder = 'Enter here…';
+
+    input.oninput = (e) => handleChange(tabIdx, fi, field.cell, e.target.value);
+    div.appendChild(input);
+    body.appendChild(div);
+  });
+
+  // Complete banner placeholder
+  const banner = document.createElement('div');
+  banner.id = 'complete-banner';
+  body.appendChild(banner);
+
+  updateHeader();
+  updateCompleteBanner();
+}
+
+/* ── Handle Field Change ─────────────────────────────────────────────────── */
+function handleChange(si, fi, cell, value) {
+  const vk = `${si}:${fi}`;
+  state.vals[vk] = value;
+  updateHeader();
+  updateAllTabProgress();
+  updateCompleteBanner();
+
+  if (!state.isDemo && state.spreadsheet) {
+    const sheetName = state.spreadsheet.sheets[si].name;
+    const tk = `${sheetName}::${cell}`;
+    clearTimeout(saveTimers[tk]);
+    saveTimers[tk] = setTimeout(() => writeCell(si, fi, sheetName, cell, value), 900);
+  }
+}
+
+/* ── Write to Google Sheets ──────────────────────────────────────────────── */
+async function writeCell(si, fi, sheetName, cell, value) {
+  if (!state.token || !state.spreadsheet) return;
+  const k = `${sheetName}::${cell}`;
+  state.saving.add(k);
+  showSaveIndicator(si, fi, 'saving');
+
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${state.spreadsheet.id}/values/${encodeURIComponent(sheetName)}!${cell}?valueInputOption=USER_ENTERED`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [[value]] }),
+      }
+    );
+    if (!res.ok) throw new Error();
+    state.saving.delete(k);
+    state.saved.add(k);
+    showSaveIndicator(si, fi, 'saved');
+    setTimeout(() => {
+      state.saved.delete(k);
+      if (state.activeTab === si) showSaveIndicator(si, fi, '');
+    }, 2500);
+  } catch {
+    state.saving.delete(k);
+    showSaveIndicator(si, fi, 'error');
+    setTimeout(() => { if (state.activeTab === si) showSaveIndicator(si, fi, ''); }, 2000);
+  }
+}
+
+function showSaveIndicator(si, fi, status) {
+  if (state.activeTab !== si) return;
+  const el = document.getElementById(`ind-${si}-${fi}`);
+  if (!el) return;
+  if (status === 'saving') {
+    el.innerHTML = '<div class="mini-spinner"></div>';
+  } else if (status === 'saved') {
+    el.innerHTML = `<svg width="15" height="15" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="7.5" fill="#16A34A"/><path d="M4.5 7.5l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  } else if (status === 'error') {
+    el.innerHTML = `<span style="color:var(--red);font-size:16px" title="Save failed">⚠</span>`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+/* ── Header & Completion ─────────────────────────────────────────────────── */
+function updateHeader() {
+  const { pct } = calcProgress(state.activeTab);
+  document.getElementById('header-pct').textContent = pct + '%';
+  document.getElementById('header-progress-fill').style.width = pct + '%';
+}
+
+function updateCompleteBanner() {
+  const { pct } = calcProgress(state.activeTab);
+  const banner = document.getElementById('complete-banner');
+  if (!banner) return;
+  if (pct === 100) {
+    banner.innerHTML = `
+      <div class="complete-banner">
+        <div class="icon">✅</div>
+        <div class="title">Sheet Complete!</div>
+        <div class="sub">All fields filled in${state.isDemo ? ' (Demo)' : ' and saved to Google Sheets'}.</div>
+      </div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+}
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
+function goBack() {
+  state = { token: null, spreadsheet: null, activeTab: 0, isDemo: false, vals: {}, saving: new Set(), saved: new Set() };
+  showError('');
+  showScreen('config');
+}
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Restore saved config on load ────────────────────────────────────────── */
+try {
+  const cid = localStorage.getItem('sd_clientId');
+  const url = localStorage.getItem('sd_sheetUrl');
+  if (cid) document.getElementById('inp-clientid').value = cid;
+  if (url) document.getElementById('inp-sheeturl').value = url;
+} catch {}
+</script>
+</body>
+</html>
