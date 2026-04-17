@@ -437,7 +437,7 @@ function signIn() {
       await loadSheet(resp.access_token, parseSheetId(sheetUrl));
     },
   });
-  tokenClient.requestAccessToken({ prompt: '' });
+  tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 /* ── Load Sheet from Sheets API ──────────────────────────────────────────── */
