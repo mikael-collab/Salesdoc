@@ -766,7 +766,7 @@ function updateTotal(){
 // AA(26) = units × price        (gross)
 // AB(27) = disc%                (displayed as-is)
 // AC(28) = AA - (AA × AB/100)  (net before VAT)
-// AD(29) or AE(30) = AC × 1.17 (net + VAT — column depends on sheet)
+// AD(29) or AE(30) = Math.round(AC × 1.18) — rounded, never sent to sheet
 function updateCalcFields(){
   const units   = S.skuQtys.reduce((s,q)=>s+(q||0),0);
   const price   = parseFloat($('inv-price')?.value||'13')||0;
@@ -774,20 +774,19 @@ function updateCalcFields(){
   const gross   = +(units * price).toFixed(2);
   const discAmt = +(gross * discPct / 100).toFixed(2);
   const net     = +(gross - discAmt).toFixed(2);
-  const withVat = +(net * (1 + VAT)).toFixed(2);
+  const withVat = Math.round(net * (1 + VAT)); // rounded ₪, display-only — NOT sent to sheet
 
-  // Update the summary section inputs (always visible)
   const set=(id,v)=>{ const e=$(id); if(e) e.value=v; };
   set('extra-26', gross);
   set('extra-27', discPct+'%');
   set('extra-28', net);
-  set('extra-vat', withVat);
+  set('extra-vat', withVat+'₪');
 
-  // Store in formVals for submit (calc cols only — AD/AE editable is handled separately)
+  // Only stored locally for display — never included in the row sent to Google Sheets
   S.formVals['_aa']=gross;
   S.formVals['_ab']=discPct;
   S.formVals['_ac']=net;
-  S.formVals['_vat']=withVat;
+  // _vat intentionally NOT stored in formVals so it can't accidentally be sent
 }
 
 // ── Submit
@@ -803,30 +802,37 @@ async function submitForm(){
     if(!S.formVals['checkPhoto']){alert('נא לצלם את השיק');return;}
   }
 
+  // Validate סכום התשלום mandatory in חשבונית/קבלה
+  if(isReceipt){
+    const payAmtIdx=sh.headers.findIndex(h=>h==='סכום התשלום');
+    if(payAmtIdx>=0 && !S.formVals['extra'+payAmtIdx] && !($('extra-'+payAmtIdx)?.value)){
+      alert('שדה "סכום התשלום" הוא חובה');return;
+    }
+  }
+
   const saveBtn=$('tb-save'); saveBtn.textContent='שומר…'; saveBtn.disabled=true;
 
   let row=[];
   if(isInv){
     const totalCols=Math.max(sh.headers.length||1,37);
     row=new Array(totalCols).fill('');
-    row[0]='';                              // A: invoice # — auto by sheet
-    row[1]=S.formVals['id']||'';           // B: customer ID
-    row[2]=S.formVals['date']||today();     // C: date
+    row[0]='';
+    row[1]=S.formVals['id']||'';
+    row[2]=S.formVals['date']||today();
     SKUS.forEach((sku,si)=>{
       row[3+si*2]  =sku.full;
       row[3+si*2+1]=S.skuQtys[si]||'';
     });
-    row[25]=S.formVals['price']||'13';     // Z: price per unit
-    // AA(26),AB(27),AC(28),AD/AE VAT col — all calculated by Google, leave ''
-    // Editable extra cols
+    row[25]=S.formVals['price']||'13';
+    // AA(26),AB(27),AC(28),AD/AE VAT — all calculated by Google Sheets, always left blank
     EDITABLE_EXTRA.forEach(ci=>{ if(ci<totalCols) row[ci]=S.formVals['extra'+ci]||''; });
-    // Receipt: map payment fields by header name
     if(isReceipt){
       sh.headers.forEach((h,i)=>{
         if(h==='אמצעי תשלום')                          row[i]=S.formVals['pay']||'';
         if(h==='מספר שיק')                             row[i]=S.formVals['checkNum']||'';
         if(h==='תאריך פרעון שיק'||h==='תאריך תשלום') row[i]=S.formVals['checkDate']||'';
         if(h==='צילום שיק')                            row[i]=S.formVals['checkPhoto']?'צולם':'';
+        if(h==='סכום התשלום')                          row[i]=$('extra-'+i)?.value||'';
       });
     }
     sh.headers.forEach((h,i)=>{ if(h==='הערות') row[i]=S.formVals['notes']||''; });
