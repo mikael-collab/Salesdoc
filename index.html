@@ -206,11 +206,30 @@ function doPost(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName(p.sheet);
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
-    if (p.action === 'append') {
+
+    if (p.action === 'fillFirstEmpty') {
+      // Find first row (after header) where the key column is empty
+      var data = sh.getDataRange().getValues();
+      var targetRow = -1;
+      for (var r = 1; r < data.length; r++) {
+        var cell = data[r][p.keyCol];
+        if (cell === '' || cell === null || cell === undefined) {
+          targetRow = r + 1; // 1-indexed
+          break;
+        }
+      }
+      if (targetRow === -1) {
+        // No pre-existing empty row — append
+        sh.appendRow(p.row);
+      } else {
+        sh.getRange(targetRow, 1, 1, p.row.length).setValues([p.row]);
+      }
+    } else if (p.action === 'append') {
       sh.appendRow(p.row);
     } else {
       sh.getRange(p.cell).setValue(p.value);
     }
+
     return ContentService
       .createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -255,19 +274,20 @@ function doPost(e) {
    SalesDocs — v3  (all 6 improvements)
    ═══════════════════════════════════════════════════════════ */
 
-// SKU definitions — short label + full name used in sheet header
+// SKU definitions — short label, full English name, Hebrew name
+// SKU name columns are NOT sent to sheet — only qty columns are written
 const SKUS = [
-  { short:'Blueb 10',  full:'Blueberry Mint 10'  },
-  { short:'Blueb 6',   full:'Blueberry Mint 6'   },
-  { short:'Lime 14',   full:'Jalapeno Lime 14'   },
-  { short:'Lime 6',    full:'Jalapeno Lime 6'     },
-  { short:'Peppe 20',  full:'Peppermint 20'       },
-  { short:'Peppe 10',  full:'Peppermint 10'       },
-  { short:'Peppe 3',   full:'Peppermint 3'        },
-  { short:'Raspb 10',  full:'Raspberry 10'        },
-  { short:'Water 20',  full:'Watermelon 20'       },
-  { short:'Water 14',  full:'Watermelon 14'       },
-  { short:'Banan 3',   full:'Banana 3'            },
+  { short:'Blueb 10',  full:'Blueberry Mint 10',  heb:'אוכמניות'     },
+  { short:'Blueb 6',   full:'Blueberry Mint 6',   heb:'אוכמניות'     },
+  { short:'Lime 14',   full:'Jalapeno Lime 14',   heb:'חלפיניו ליים' },
+  { short:'Lime 6',    full:'Jalapeno Lime 6',    heb:'חלפיניו ליים' },
+  { short:'Peppe 20',  full:'Peppermint 20',      heb:'מנטה'         },
+  { short:'Peppe 10',  full:'Peppermint 10',      heb:'מנטה'         },
+  { short:'Peppe 3',   full:'Peppermint 3',       heb:'מנטה'         },
+  { short:'Raspb 10',  full:'Raspberry Soda 10',  heb:'פטל'          },
+  { short:'Water 20',  full:'Watermelon 20',      heb:'אבטיח'        },
+  { short:'Water 14',  full:'Watermelon 14',      heb:'אבטיח'        },
+  { short:'Banan 3',   full:'Banana 3',           heb:'בננה'         },
 ];
 const SKU_QTY_COLS = [4,6,8,10,12,14,16,18,20,22,24]; // 0-based cols for quantities
 
@@ -588,8 +608,10 @@ function renderInvoiceForm(){
           <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית. שאר השדות ינעלו עד להזנת ת''ז.</div>
         </div>
         <div class="fgrp">
-          <label class="flabel">מספר חשבונית</label>
-          <input type="text" id="inv-num" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
+          <label class="flabel">מספר חשבונית מס / קבלה${isReceipt?' <span style="color:var(--red)">*</span>':''}</label>
+          <input type="text" id="inv-num" ${isReceipt?'class="inv-field"':'disabled style="background:#F3F4F8;color:#9AA3B5;"'}
+            placeholder="${isReceipt?'הזן מספר קבלה':'יתמלא אוטומטית'}"
+            oninput="S.formVals['num']=this.value">
         </div>
         <div class="fgrp">
           <label class="flabel">תאריך</label>
@@ -603,7 +625,7 @@ function renderInvoiceForm(){
   SKUS.forEach((sku,si)=>{
     html+=`<div class="sku-row">
       <div class="sku-name-wrap">
-        <div class="sku-short">${esc(sku.short)}</div>
+        <div class="sku-short">${esc(sku.short)} <span style="color:var(--amber);font-weight:400;font-size:12px">| ${esc(sku.heb)}</span></div>
         <div class="sku-full">${esc(sku.full)}</div>
       </div>
       <div class="stepper">
@@ -821,16 +843,23 @@ async function submitForm(){
   if(isInv){
     const totalCols=Math.max(sh.headers.length||1,37);
     row=new Array(totalCols).fill('');
-    row[0]='';
-    row[1]=S.formVals['id']||'';
-    row[2]=S.formVals['date']||today();
+
+    // A: invoice number — only sent for קבלה (user enters it); חשבוניות auto-generates
+    row[0] = isReceipt ? (S.formVals['num']||'') : '';
+    row[1] = S.formVals['id']||'';                              // B: customer ID
+    row[2] = S.formVals['date']||today();                       // C: date
+
+    // SKU qty only — name columns left blank (sheet already has them)
     SKUS.forEach((sku,si)=>{
-      row[3+si*2]  =sku.full;
-      row[3+si*2+1]=S.skuQtys[si]||'';
+      // row[3+si*2] = SKU name col — intentionally left '' (not sent)
+      row[3+si*2+1] = S.skuQtys[si] || '';                     // qty col only
     });
-    row[25]=S.formVals['price']||'13';
-    // AA(26),AB(27),AC(28),AD/AE VAT — all calculated by Google Sheets, always left blank
+
+    row[25] = parseFloat(S.formVals['price']||'13').toFixed(2); // Z: price, 2 decimals
+
+    // AA-AE: calculated by Google Sheets — always left ''
     EDITABLE_EXTRA.forEach(ci=>{ if(ci<totalCols) row[ci]=S.formVals['extra'+ci]||''; });
+
     if(isReceipt){
       sh.headers.forEach((h,i)=>{
         if(h==='אמצעי תשלום')                          row[i]=S.formVals['pay']||'';
@@ -848,7 +877,13 @@ async function submitForm(){
   if(S.isDemo){ sh.rows.push(row); navBack(); saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; return; }
 
   try{
-    const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
+    // Fix 3: write to first empty row by key column, not just append
+    // חשבוניות → key col = 1 (ת"ז/ח"פ); קבלה → key col = 0 (מספר חשבונית)
+    const keyCol = isReceipt ? 0 : 1;
+    const res=await fetch(S.scriptUrl,{
+      method:'POST',
+      body:JSON.stringify({action:'fillFirstEmpty', sheet:S.tab, keyCol, row})
+    });
     const data=await res.json();
     if(!data.ok)throw new Error(data.error);
     await refreshSheets();
