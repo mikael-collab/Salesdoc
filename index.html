@@ -547,18 +547,21 @@ function lookupCustomer(idVal, isInvoice){
 function enableInvoiceFields(on){
   document.querySelectorAll('.inv-field').forEach(el=>{el.disabled=!on;});
   document.querySelectorAll('.st-btn,.st-inp').forEach(el=>{el.disabled=!on;});
+  if(on) updateCalcFields(); // populate calc fields as soon as form is unlocked
 }
 
 // ── Invoice column constants
-// AA=26: gross (units×price), AB=27: disc%, AC=28: net before VAT, AD=29: net+VAT
-// In חשבוניות: AD(29) and AE(30) are SWAPPED — so VAT total goes into AE(30) for that sheet
-// CALC_COLS are shown but never sent to the sheet (Google calculates them)
-const CALC_COLS      = [26,27,28,30];
-const EDITABLE_EXTRA = [29,36];
+// AA=26: gross, AB=27: disc%, AC=28: net before VAT
+// AD=29: net+VAT for חשבונית/קבלה — or AE=30 for חשבוניות (columns swapped)
+// ALL of 26-30 are calculated — never editable, never sent
+// AK=36: editable (e.g. הערות or other field)
+const CALC_COLS      = [26,27,28,29,30]; // never sent, never editable
+const EDITABLE_EXTRA = [36];             // editable after customer lookup
 const SKIP_COLS      = new Set(CALC_COLS);
 const VAT            = 0.18;
+// Fields that are editable regardless of column index (matched by header name)
+const EDITABLE_BY_NAME = ['סכום התשלום'];
 
-// Which column holds "net+VAT" depends on sheet (AD/AE swapped in חשבוניות)
 function vatCol(){ return (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; }
 
 function renderInvoiceForm(){
@@ -630,28 +633,29 @@ function renderInvoiceForm(){
         </div>
       </div>`;
 
-  // ── Calculated summary fields (AA-AD/AE) — blue tint, auto-computed, not sent to sheet
+  // ── Calculated summary fields — blue tint, auto-computed on blur, never sent to sheet
+  const vc = (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; // VAT col index
   html+=`
       <div class="fsec" style="padding-bottom:6px">
-        <div class="fsec-title">סיכום חשבון</div>
+        <div class="fsec-title">סיכום חשבון <span style="color:var(--amber);font-size:10px;font-weight:400">• מחושב אוטומטית</span></div>
         <div class="order-row">
           <div class="fgrp">
-            <label class="flabel">סכום (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
-            <input type="text" id="extra-26" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+            <label class="flabel">סכום לפני הנחה (₪)</label>
+            <input type="text" id="extra-26" disabled value="" placeholder="—" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
           </div>
           <div class="fgrp">
             <label class="flabel">הנחה (%)</label>
-            <input type="text" id="extra-27" disabled value="" placeholder="0" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+            <input type="text" id="extra-27" disabled value="" placeholder="—" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
           </div>
         </div>
         <div class="order-row">
           <div class="fgrp">
-            <label class="flabel">לאחר הנחה (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
-            <input type="text" id="extra-28" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+            <label class="flabel">לאחר הנחה (₪)</label>
+            <input type="text" id="extra-28" disabled value="" placeholder="—" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
           </div>
           <div class="fgrp">
-            <label class="flabel">כולל מע״מ (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
-            <input type="text" id="extra-vat" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:700;">
+            <label class="flabel">סה״כ כולל מע״מ 18% (₪)</label>
+            <input type="text" id="extra-${vc}" disabled value="" placeholder="—" style="background:#1B2B4B;color:#F5C056;font-weight:700;font-size:17px;">
           </div>
         </div>
       </div>`;
@@ -697,13 +701,15 @@ function renderInvoiceForm(){
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
-      // Skip the calc cols — they are shown in "סיכום חשבון" section above
+      // Skip calc cols — already shown in "סיכום חשבון" above (including VAT col)
       if(CALC_COLS.includes(i)) return;
-      const isEdit = EDITABLE_EXTRA.includes(i);
+      const isEditByIdx  = EDITABLE_EXTRA.includes(i);
+      const isEditByName = EDITABLE_BY_NAME.includes(h);
+      const isEdit = isEditByIdx || isEditByName;
       const cls    = isEdit ? 'inv-field' : '';
       const dis    = isEdit ? '' : 'disabled';
       html+=`<div class="fgrp">
-        <label class="flabel">${esc(h)}</label>
+        <label class="flabel">${esc(h)}${isEditByName?` <span style="color:var(--red)">*</span>`:''}</label>
         <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${isEdit?'הזן…':''}"
           oninput="S.formVals['extra${i}']=this.value">
       </div>`;
@@ -762,11 +768,11 @@ function updateTotal(){
   updateCalcFields();
 }
 
-// ── Calculate on-the-fly (triggered on blur from qty/price/disc)
-// AA(26) = units × price        (gross)
-// AB(27) = disc%                (displayed as-is)
-// AC(28) = AA - (AA × AB/100)  (net before VAT)
-// AD(29) or AE(30) = Math.round(AC × 1.18) — rounded, never sent to sheet
+// ── Calculate on-the-fly (triggered on blur from qty/price/disc, and on field enable)
+// AA(26) = units × price             (gross)
+// AB(27) = disc%                     (displayed as-is)
+// AC(28) = AA − (AA × AB/100)        (net before VAT)
+// AD(29) or AE(30) = Math.round(AC × 1.18) — rounded ₪, NEVER sent to sheet
 function updateCalcFields(){
   const units   = S.skuQtys.reduce((s,q)=>s+(q||0),0);
   const price   = parseFloat($('inv-price')?.value||'13')||0;
@@ -774,19 +780,18 @@ function updateCalcFields(){
   const gross   = +(units * price).toFixed(2);
   const discAmt = +(gross * discPct / 100).toFixed(2);
   const net     = +(gross - discAmt).toFixed(2);
-  const withVat = Math.round(net * (1 + VAT)); // rounded ₪, display-only — NOT sent to sheet
+  const withVat = Math.round(net * (1 + VAT)); // whole ₪, display only — never sent
 
   const set=(id,v)=>{ const e=$(id); if(e) e.value=v; };
-  set('extra-26', gross);
-  set('extra-27', discPct+'%');
-  set('extra-28', net);
-  set('extra-vat', withVat+'₪');
+  set('extra-26', gross || '');
+  set('extra-27', discPct ? discPct+'%' : '');
+  set('extra-28', net || '');
+  set('extra-'+vatCol(), withVat || ''); // correct column per sheet type
 
-  // Only stored locally for display — never included in the row sent to Google Sheets
+  // Only store gross/net for potential display — VAT total intentionally excluded from formVals
   S.formVals['_aa']=gross;
   S.formVals['_ab']=discPct;
   S.formVals['_ac']=net;
-  // _vat intentionally NOT stored in formVals so it can't accidentally be sent
 }
 
 // ── Submit
