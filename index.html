@@ -903,39 +903,26 @@ async function submitForm(){
     }
 
     try{
-      // Find target row from cached sheet data (first row where key column is empty)
-      const keyHeader = isReceipt ? ['מספר','קבלה'] : ['ת"ז','ח"פ'];
-      const keyColIdx = headers.findIndex(h=>keyHeader.some(p=>h.includes(p)));
-      let targetSheetRow = null;
-      for(let r=0;r<sh.rows.length;r++){
-        const v=sh.rows[r][keyColIdx>=0?keyColIdx:1];
-        if(v===''||v===null||v===undefined){targetSheetRow=r+2;break;}
-      }
+      if(!S.scriptUrl) throw new Error('Script URL not set');
 
       const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
 
-      if(targetSheetRow){
-        // Write cells ONE AT A TIME sequentially — Apps Script can't handle parallel POSTs
-        for(const [ci,v] of nonEmpty){
-          const cell=colLetter(parseInt(ci))+targetSheetRow;
-          const res=await fetch(S.scriptUrl,{
-            method:'POST',
-            body:JSON.stringify({sheet:S.tab, cell, value:v})
-          });
-          // Parse response but don't abort on individual cell errors — keep writing the rest
-          try{
-            const d=await res.json();
-            if(!d.ok) console.warn('Cell write warning:',cell,d.error);
-          }catch{}
-        }
-      } else {
-        // No empty row found — append a new row with correct column mapping
-        const row=new Array(Math.max(headers.length,37)).fill('');
-        nonEmpty.forEach(([ci,v])=>{row[parseInt(ci)]=v;});
-        const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
-        const data=await res.json();
-        if(!data.ok)throw new Error(data.error);
-      }
+      // Build a single row array with correct column positions (from header-name mapping)
+      // Single POST request — avoids the redirect issues of multiple sequential fetches
+      const rowLen=Math.max(headers.length,37);
+      const row=new Array(rowLen).fill('');
+      nonEmpty.forEach(([ci,v])=>{
+        const idx=parseInt(ci);
+        if(!isNaN(idx)&&idx>=0&&idx<rowLen) row[idx]=v;
+      });
+
+      const res=await fetch(S.scriptUrl,{
+        method:'POST',
+        body:JSON.stringify({action:'append',sheet:S.tab,row})
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data=await res.json();
+      if(!data.ok) throw new Error(data.error||'Unknown error');
 
       await refreshSheets();
       navBack();
