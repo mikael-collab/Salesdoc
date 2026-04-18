@@ -81,6 +81,8 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .nav-icon{font-size:17px;}
 
 .content{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
+#list-shell{display:flex;flex-direction:column;flex:1;}
+#list-items{flex:1;}
 
 /* ── LIST VIEW ── */
 .search-wrap{padding:10px 14px 6px;background:var(--cream);position:sticky;top:0;z-index:10;}
@@ -358,6 +360,8 @@ function switchTab(name){
   if(S.view==='form')navBack();
   S.tab=name; S.search=''; S.expanded=-1;
   document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',S.sheetNames[i]===name));
+  // Clear shell so it rebuilds for new tab
+  $('content').innerHTML='';
   renderList();
 }
 
@@ -379,21 +383,39 @@ function setTopBar(view){
 // ── LIST
 function renderList(){
   S.view='list'; setTopBar('list');
+  const content=$('content');
+
+  // Build shell once (search bar + containers) — preserve if already present
+  if(!$('list-shell')){
+    content.innerHTML=`
+      <div id="list-shell">
+        <div class="search-wrap">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input class="search-inp" id="search-inp" type="search" placeholder="חיפוש…" oninput="onSearch(this.value)">
+          </div>
+        </div>
+        <div class="list-meta" id="list-meta"></div>
+        <div id="list-items"></div>
+      </div>`;
+  }
+  // Restore search value without moving focus
+  const inp=$('search-inp');
+  if(inp && document.activeElement!==inp) inp.value=S.search;
+
+  renderListItems();
+}
+
+function renderListItems(){
   const sh=S.sheets[S.tab]; const q=S.search.toLowerCase();
   const rows=sh?.rows||[];
   const filtered=rows.filter(r=>!q||r.some(c=>String(c).toLowerCase().includes(q)));
 
-  let html=`
-    <div class="search-wrap">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input class="search-inp" type="search" placeholder="חיפוש…" value="${esc(S.search)}" oninput="onSearch(this.value)">
-      </div>
-    </div>
-    <div class="list-meta">${filtered.length} מתוך ${rows.length} רשומות</div>`;
+  $('list-meta').textContent=filtered.length+' מתוך '+rows.length+' רשומות';
 
+  let html='';
   if(!filtered.length){
-    html+=`<div class="empty"><div class="empty-icon">🔎</div><div>לא נמצאו רשומות</div></div>`;
+    html=`<div class="empty"><div class="empty-icon">🔎</div><div>לא נמצאו רשומות</div></div>`;
   } else {
     filtered.forEach(row=>{
       const ri=rows.indexOf(row);
@@ -421,10 +443,10 @@ function renderList(){
       html+=`</div>`;
     });
   }
-  $('content').innerHTML=html;
+  $('list-items').innerHTML=html;
 }
 
-function onSearch(v){ S.search=v; S.expanded=-1; renderList(); }
+function onSearch(v){ S.search=v; S.expanded=-1; renderListItems(); }
 function toggleExp(ri){ S.expanded=S.expanded===ri?-1:ri; renderList(); }
 function copyVal(ri,val){
   navigator.clipboard.writeText(val).then(()=>{
@@ -444,7 +466,7 @@ function showForm(){
   if(isInv) renderInvoiceForm();
   else renderCustomerForm();
 }
-function navBack(){ S.view='list'; buildNav(); renderList(); }
+function navBack(){ S.view='list'; $('content').innerHTML=''; buildNav(); renderList(); }
 
 // ── Customer form — lookup by ID, fields locked until ID entered
 function renderCustomerForm(){
@@ -525,7 +547,15 @@ function enableInvoiceFields(on){
 // ── Invoice form
 function renderInvoiceForm(){
   const isReceipt=isReceiptSheet(S.tab);
+  const headers=S.sheets[S.tab]?.headers||[];
   const content=$('content');
+
+  // Extra fields: sheet columns beyond the standard ones (index >= 26, i.e. AA onwards)
+  // Editable: col index 29 (AD) and 36 (AK). All others disabled.
+  const EDITABLE_EXTRA=[29,36];
+  const extraFields=[];
+  headers.forEach((h,i)=>{ if(i>=26 && h) extraFields.push({h,i}); });
+
   let html=`
     <div class="total-bar">
       <div class="total-inner">
@@ -546,7 +576,7 @@ function renderInvoiceForm(){
 
         <div class="fgrp">
           <label class="flabel">מספר חשבונית</label>
-          <input type="text" id="inv-num" class="inv-field" disabled placeholder="מספר חשבונית" oninput="S.formVals['num']=this.value">
+          <input type="text" id="inv-num" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
         </div>
 
         <div class="fgrp">
@@ -606,6 +636,21 @@ function renderInvoiceForm(){
       </div>`;
   }
 
+  // Extra sheet fields AA–AK (col index 26+), disabled except AD(29) and AK(36)
+  if(extraFields.length){
+    html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
+    extraFields.forEach(({h,i})=>{
+      const editable=EDITABLE_EXTRA.includes(i);
+      const cls=editable?'inv-field':'';
+      const dis=editable?'':'disabled';
+      html+=`<div class="fgrp">
+        <label class="flabel">${esc(h)}</label>
+        <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${editable?'הזן…':''}" oninput="S.formVals['extra${i}']=this.value">
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
   html+=`
       <div class="fsec" style="padding-bottom:14px">
         <div class="fsec-title">הערות</div>
@@ -616,8 +661,6 @@ function renderInvoiceForm(){
     </div>`;
 
   content.innerHTML=html;
-
-  // Set today's date as default
   S.formVals['date']=today();
   S.formVals['price']='13';
   S.formVals['disc']='0';
