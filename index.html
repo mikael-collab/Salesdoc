@@ -556,7 +556,7 @@ function enableInvoiceFields(on){
 const CALC_COLS      = [26,27,28,30];
 const EDITABLE_EXTRA = [29,36];
 const SKIP_COLS      = new Set(CALC_COLS);
-const VAT            = 0.17;
+const VAT            = 0.18;
 
 // Which column holds "net+VAT" depends on sheet (AD/AE swapped in חשבוניות)
 function vatCol(){ return (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; }
