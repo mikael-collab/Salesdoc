@@ -532,11 +532,17 @@ function lookupCustomer(idVal, isInvoice){
   if(!custSheet) return;
   const match=custSheet.rows.find(r=>String(r[1]||'').trim()===idVal);
   if(isInvoice){
-    // Fill customer name display in invoice form
     const lbl=$('inv-cust-name');
     if(match){
-      if(lbl){lbl.textContent=match[0]||'';lbl.style.display='block';}
+      if(lbl){lbl.textContent=match[0]||'';lbl.style.color='#166534';lbl.style.display='block';}
       S.formVals['custName']=match[0]||'';
+      // Also silently populate any hidden "שם לקוח" columns in the sheet
+      const sh=S.sheets[S.tab];
+      if(sh) sh.headers.forEach((h,i)=>{
+        if(['שם לקוח','שם הלקוח','לקוח','שם'].includes(h.trim())){
+          S.formVals['extra'+i]=match[0]||'';
+        }
+      });
       enableInvoiceFields(true);
     } else {
       if(lbl){lbl.textContent='לקוח לא נמצא';lbl.style.color='var(--red)';lbl.style.display='block';}
@@ -719,12 +725,15 @@ function renderInvoiceForm(){
       </div>`;
   }
 
-  // ── Extra sheet fields AA+ (editable ones only: AD/AK; everything else shown but disabled)
+  // ── Extra sheet fields AA+
+  // Skip: calc cols (already in summary), and fields already shown at the top of the form
+  // (customer name variations — shown via lookup, not repeated here)
+  const TOP_FIELDS = new Set(['שם לקוח','שם הלקוח','לקוח','שם','customer name','name']);
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
-      // Skip calc cols — already shown in "סיכום חשבון" above (including VAT col)
-      if(CALC_COLS.includes(i)) return;
+      if(CALC_COLS.includes(i)) return;           // already in summary section
+      if(TOP_FIELDS.has(h.trim())) return;        // already shown at top via customer lookup
       const isEditByIdx  = EDITABLE_EXTRA.includes(i);
       const isEditByName = EDITABLE_BY_NAME.includes(h);
       const isEdit = isEditByIdx || isEditByName;
@@ -869,7 +878,11 @@ async function submitForm(){
         if(h==='סכום התשלום')                          row[i]=$('extra-'+i)?.value||'';
       });
     }
-    sh.headers.forEach((h,i)=>{ if(h==='הערות') row[i]=S.formVals['notes']||''; });
+    sh.headers.forEach((h,i)=>{
+      if(h==='הערות') row[i]=S.formVals['notes']||'';
+      // Write customer name to any hidden שם לקוח column (not shown in form but sent to sheet)
+      if(['שם לקוח','שם הלקוח','לקוח','שם'].includes(h.trim())) row[i]=S.formVals['custName']||'';
+    });
   } else {
     row=sh.headers.map((_,i)=>S.formVals[i]||'');
   }
