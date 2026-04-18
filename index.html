@@ -726,14 +726,24 @@ function renderInvoiceForm(){
   }
 
   // ── Extra sheet fields AA+
-  // Skip: calc cols (already in summary), and fields already shown at the top of the form
-  // (customer name variations — shown via lookup, not repeated here)
-  const TOP_FIELDS = new Set(['שם לקוח','שם הלקוח','לקוח','שם','customer name','name']);
+  // Fields already shown elsewhere in the form — skip them in extraFields to avoid duplicates
+  const TOP_FIELDS = new Set([
+    // Customer name — shown via lookup at top
+    'שם לקוח','שם הלקוח','לקוח','שם','customer name','name',
+    // Invoice number — shown at top after ת"ז
+    'מספר חשבונית','מספר חשבונית מס','מספר חשבונית מס / קבלה',
+    'מספר קבלה','מספר חשבונית / קבלה','קבלה',
+    // Check-specific fields — handled by the check-fields section
+    'מספר שיק','מספר צ\'ק','תאריך תשלום','תאריך פרעון שיק',
+    'תאריך פרעון','צילום שיק','צ\'ק',
+    // Payment method — handled by radio buttons above
+    'אמצעי תשלום',
+  ]);
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
-      if(CALC_COLS.includes(i)) return;           // already in summary section
-      if(TOP_FIELDS.has(h.trim())) return;        // already shown at top via customer lookup
+      if(CALC_COLS.includes(i)) return;
+      if(TOP_FIELDS.has(h.trim())) return;
       const isEditByIdx  = EDITABLE_EXTRA.includes(i);
       const isEditByName = EDITABLE_BY_NAME.includes(h);
       const isEdit = isEditByIdx || isEditByName;
@@ -755,12 +765,12 @@ function renderInvoiceForm(){
   S.formVals['disc']='0';
 }
 
-// ── Payment method toggle — show/hide check fields
+// ── Payment method toggle — show/hide check fields only
 function onPayChange(val){
   S.formVals['pay']=val;
   const checkDiv=$('check-fields');
   if(checkDiv) checkDiv.style.display = val==='שיק' ? 'block' : 'none';
-  // Enable/disable check inputs
+  // Only toggle the check-specific inputs, not the whole form
   ['check-num','check-date','check-photo'].forEach(id=>{
     const el=$(id); if(el) el.disabled = val!=='שיק';
   });
