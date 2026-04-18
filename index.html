@@ -146,6 +146,11 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .order-row .fgrp{flex:1;}
 
 .demo-bar{background:#FFF3CD;border-bottom:1px solid #F0C030;padding:7px 16px;font-size:12px;color:#856404;font-weight:500;text-align:center;flex-shrink:0;}
+
+/* Photo upload */
+.photo-wrap{width:100%;}
+.photo-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border:2px dashed var(--border);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--navy);background:#FAFBFE;transition:.15s;}
+.photo-btn:active{background:var(--cream);}
 </style>
 </head>
 <body>
@@ -544,20 +549,22 @@ function enableInvoiceFields(on){
   document.querySelectorAll('.st-btn,.st-inp').forEach(el=>{el.disabled=!on;});
 }
 
-// ── Invoice form
-// Calculated cols: AA=26, AB=27, AC=28, AE=30 — shown but NOT sent to sheet
-// Editable cols:   AD=29, AK=36 — shown and sent
-const CALC_COLS   = [26,27,28,30];
+// ── Invoice column constants
+// AA=26: gross (units×price), AB=27: disc%, AC=28: net before VAT, AD=29: net+VAT
+// In חשבוניות: AD(29) and AE(30) are SWAPPED — so VAT total goes into AE(30) for that sheet
+// CALC_COLS are shown but never sent to the sheet (Google calculates them)
+const CALC_COLS      = [26,27,28,30];
 const EDITABLE_EXTRA = [29,36];
-const SKIP_COLS   = new Set(CALC_COLS); // don't send these
+const SKIP_COLS      = new Set(CALC_COLS);
+const VAT            = 0.17;
+
+// Which column holds "net+VAT" depends on sheet (AD/AE swapped in חשבוניות)
+function vatCol(){ return (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; }
 
 function renderInvoiceForm(){
   const isReceipt=isReceiptSheet(S.tab);
   const headers=S.sheets[S.tab]?.headers||[];
   const content=$('content');
-
-  // Extra fields: cols AA (26) onwards from sheet headers, excluding any named הערות
-  // הערות lives in the sheet and will appear here — we don't add a separate hardcoded one
   const extraFields=[];
   headers.forEach((h,i)=>{ if(i>=26 && h) extraFields.push({h,i}); });
 
@@ -598,7 +605,8 @@ function renderInvoiceForm(){
       </div>
       <div class="stepper">
         <button class="st-btn inv-field" disabled onclick="adjQty(${si},-1)">−</button>
-        <input class="st-inp inv-field" disabled id="qty-${si}" type="number" min="0" value="0" oninput="setQty(${si},this.value)">
+        <input class="st-inp inv-field" disabled id="qty-${si}" type="number" min="0" value="0"
+          oninput="setQty(${si},this.value)" onblur="setQty(${si},this.value)">
         <button class="st-btn plus inv-field" disabled onclick="adjQty(${si},1)">+</button>
       </div>
     </div>`;
@@ -611,47 +619,93 @@ function renderInvoiceForm(){
         <div class="order-row">
           <div class="fgrp">
             <label class="flabel">מחיר ליחידה (₪)</label>
-            <input type="number" id="inv-price" class="inv-field" disabled min="0" value="13" oninput="S.formVals['price']=this.value;updateCalcFields()">
+            <input type="number" id="inv-price" class="inv-field" disabled min="0" value="13"
+              oninput="S.formVals['price']=this.value" onblur="updateCalcFields()">
           </div>
           <div class="fgrp">
             <label class="flabel">הנחה (%)</label>
-            <input type="number" id="inv-disc" class="inv-field" disabled min="0" max="100" value="0" oninput="S.formVals['disc']=this.value;updateCalcFields()">
+            <input type="number" id="inv-disc" class="inv-field" disabled min="0" max="100" value="0"
+              oninput="S.formVals['disc']=this.value" onblur="updateCalcFields()">
           </div>
         </div>
       </div>`;
 
+  // ── Calculated summary fields (AA-AD/AE) — blue tint, auto-computed, not sent to sheet
+  html+=`
+      <div class="fsec" style="padding-bottom:6px">
+        <div class="fsec-title">סיכום חשבון</div>
+        <div class="order-row">
+          <div class="fgrp">
+            <label class="flabel">סכום (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
+            <input type="text" id="extra-26" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">הנחה (%)</label>
+            <input type="text" id="extra-27" disabled value="" placeholder="0" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+          </div>
+        </div>
+        <div class="order-row">
+          <div class="fgrp">
+            <label class="flabel">לאחר הנחה (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
+            <input type="text" id="extra-28" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:600;">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">כולל מע״מ (₪) <span style="color:var(--amber);font-size:9px">מחושב</span></label>
+            <input type="text" id="extra-vat" disabled value="" placeholder="0.00" style="background:#EEF2FF;color:#3B5EA6;font-weight:700;">
+          </div>
+        </div>
+      </div>`;
+
+  // ── Payment section (receipt sheet only)
   if(isReceipt){
     html+=`
       <div class="fsec">
         <div class="fsec-title">אמצעי תשלום</div>
         <div class="pay-options">
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash" value="מזומן" onchange="S.formVals['pay']=this.value"><label for="pay-cash">💵 מזומן</label></div>
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-check" value="צ'ק" onchange="S.formVals['pay']=this.value"><label for="pay-check">📝 צ'ק</label></div>
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-transfer" value="העברה" onchange="S.formVals['pay']=this.value"><label for="pay-transfer">🏦 העברה</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash"     value="מזומן" onchange="onPayChange(this.value)"><label for="pay-cash">💵 מזומן</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-check"    value="שיק"   onchange="onPayChange(this.value)"><label for="pay-check">📝 שיק</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-transfer" value="העברה" onchange="onPayChange(this.value)"><label for="pay-transfer">🏦 העברה</label></div>
         </div>
-        <div class="fgrp" style="margin-top:10px">
-          <label class="flabel">פרטים נוספים</label>
-          <input type="text" id="inv-paydetail" class="inv-field" disabled placeholder="מספר צ'ק, אסמכתא וכד'…" oninput="S.formVals['paydetail']=this.value">
+
+        <!-- Check-only fields — hidden until שיק is selected -->
+        <div id="check-fields" style="display:none;margin-top:10px">
+          <div class="fgrp">
+            <label class="flabel">מספר שיק <span style="color:var(--red)">*</span></label>
+            <input type="text" id="check-num" class="inv-field" placeholder="מספר השיק" oninput="S.formVals['checkNum']=this.value">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">תאריך פרעון שיק <span style="color:var(--red)">*</span></label>
+            <input type="date" id="check-date" class="inv-field" oninput="S.formVals['checkDate']=this.value">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">צילום שיק <span style="color:var(--red)">*</span></label>
+            <div class="photo-wrap">
+              <label class="photo-btn" for="check-photo">
+                <span id="photo-icon">📷</span>
+                <span id="photo-label">צלם / בחר תמונה</span>
+              </label>
+              <input type="file" id="check-photo" accept="image/*" capture="environment"
+                style="display:none" onchange="onCheckPhoto(this)">
+              <img id="check-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;border:1px solid var(--border);">
+            </div>
+          </div>
         </div>
       </div>`;
   }
 
-  // Extra sheet fields AA onwards
-  // Calc cols (AA,AB,AC,AE) = disabled + auto-updated on the fly
-  // Editable cols (AD,AK) = enabled after customer lookup
-  // All others (AF-AJ except AK, and AK+) = disabled
+  // ── Extra sheet fields AA+ (editable ones only: AD/AK; everything else shown but disabled)
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
-      const isCalc  = CALC_COLS.includes(i);
-      const isEdit  = EDITABLE_EXTRA.includes(i);
-      const cls     = isEdit ? 'inv-field' : '';
-      const dis     = isEdit ? '' : 'disabled';
-      const ph      = isEdit ? 'הזן…' : (isCalc ? 'מחושב אוטומטית' : '');
-      const style   = isCalc ? 'background:#EEF2FF;color:#4F6EC0;font-weight:600;' : '';
+      // Skip the calc cols — they are shown in "סיכום חשבון" section above
+      if(CALC_COLS.includes(i)) return;
+      const isEdit = EDITABLE_EXTRA.includes(i);
+      const cls    = isEdit ? 'inv-field' : '';
+      const dis    = isEdit ? '' : 'disabled';
       html+=`<div class="fgrp">
         <label class="flabel">${esc(h)}</label>
-        <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${ph}" style="${style}" oninput="S.formVals['extra${i}']=this.value">
+        <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${isEdit?'הזן…':''}"
+          oninput="S.formVals['extra${i}']=this.value">
       </div>`;
     });
     html+=`</div>`;
@@ -664,6 +718,31 @@ function renderInvoiceForm(){
   S.formVals['disc']='0';
 }
 
+// ── Payment method toggle — show/hide check fields
+function onPayChange(val){
+  S.formVals['pay']=val;
+  const checkDiv=$('check-fields');
+  if(checkDiv) checkDiv.style.display = val==='שיק' ? 'block' : 'none';
+  // Enable/disable check inputs
+  ['check-num','check-date','check-photo'].forEach(id=>{
+    const el=$(id); if(el) el.disabled = val!=='שיק';
+  });
+}
+
+// ── Check photo handler
+function onCheckPhoto(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=$('check-preview');
+    if(prev){prev.src=e.target.result;prev.style.display='block';}
+    $('photo-label').textContent='תמונה נבחרה ✓';
+    $('photo-icon').textContent='✅';
+    S.formVals['checkPhoto']=e.target.result; // base64
+  };
+  reader.readAsDataURL(file);
+}
+
 // ── SKU steppers
 function adjQty(si,delta){
   const n=Math.max(0,(S.skuQtys[si]||0)+delta);
@@ -674,30 +753,41 @@ function adjQty(si,delta){
 function setQty(si,val){
   const n=Math.max(0,parseInt(val)||0);
   S.skuQtys[si]=n;
-  const inp=$('qty-'+si); if(inp){inp.classList.toggle('has-v',n>0);}
+  const inp=$('qty-'+si); if(inp){inp.value=n;inp.classList.toggle('has-v',n>0);}
   updateTotal();
 }
 function updateTotal(){
   const total=S.skuQtys.reduce((s,q)=>s+(q||0),0);
-  const el=$('total-units'); if(el)el.textContent=total;
+  const el=$('total-units'); if(el) el.textContent=total;
   updateCalcFields();
 }
 
-// Update calculated fields AA-AE on the fly (shown but not sent to sheet)
-// Mapping: AA(26)=total units, AB(27)=gross, AC(28)=discount amount, AE(30)=net
+// ── Calculate on-the-fly (triggered on blur from qty/price/disc)
+// AA(26) = units × price        (gross)
+// AB(27) = disc%                (displayed as-is)
+// AC(28) = AA - (AA × AB/100)  (net before VAT)
+// AD(29) or AE(30) = AC × 1.17 (net + VAT — column depends on sheet)
 function updateCalcFields(){
-  const units = S.skuQtys.reduce((s,q)=>s+(q||0),0);
-  const price  = parseFloat($('inv-price')?.value||'13')||0;
-  const discPct= parseFloat($('inv-disc')?.value||'0')||0;
-  const gross  = units * price;
-  const discAmt= +(gross * discPct / 100).toFixed(2);
-  const net    = +(gross - discAmt).toFixed(2);
+  const units   = S.skuQtys.reduce((s,q)=>s+(q||0),0);
+  const price   = parseFloat($('inv-price')?.value||'13')||0;
+  const discPct = parseFloat($('inv-disc')?.value||'0')||0;
+  const gross   = +(units * price).toFixed(2);
+  const discAmt = +(gross * discPct / 100).toFixed(2);
+  const net     = +(gross - discAmt).toFixed(2);
+  const withVat = +(net * (1 + VAT)).toFixed(2);
 
-  const map = { 26: units, 27: gross, 28: discAmt, 30: net };
-  Object.entries(map).forEach(([col, val])=>{
-    const el=$('extra-'+col);
-    if(el) el.value = val;
-  });
+  // Update the summary section inputs (always visible)
+  const set=(id,v)=>{ const e=$(id); if(e) e.value=v; };
+  set('extra-26', gross);
+  set('extra-27', discPct+'%');
+  set('extra-28', net);
+  set('extra-vat', withVat);
+
+  // Store in formVals for submit (calc cols only — AD/AE editable is handled separately)
+  S.formVals['_aa']=gross;
+  S.formVals['_ab']=discPct;
+  S.formVals['_ac']=net;
+  S.formVals['_vat']=withVat;
 }
 
 // ── Submit
@@ -705,73 +795,51 @@ async function submitForm(){
   const sh=S.sheets[S.tab]; if(!sh)return;
   const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
   const isReceipt=isReceiptSheet(S.tab);
+
+  // Validate check payment mandatory fields
+  if(isReceipt && S.formVals['pay']==='שיק'){
+    if(!S.formVals['checkNum'])  {alert('נא להזין מספר שיק');return;}
+    if(!S.formVals['checkDate']) {alert('נא להזין תאריך פרעון שיק');return;}
+    if(!S.formVals['checkPhoto']){alert('נא לצלם את השיק');return;}
+  }
+
   const saveBtn=$('tb-save'); saveBtn.textContent='שומר…'; saveBtn.disabled=true;
 
   let row=[];
   if(isInv){
-    // Build full-length row matching sheet column structure.
-    // Calculated columns (AA=26,AB=27,AC=28,AE=30) are sent as '' — Google Sheets computes them.
-    const totalCols = sh.headers.length || 37;
-    row = new Array(totalCols).fill('');
-
-    row[0]  = '';                                 // A: invoice number — auto by sheet
-    row[1]  = S.formVals['id']||'';              // B: customer ID
-    row[2]  = S.formVals['date']||today();        // C: date
-
-    // SKU pairs D(3)–Y(24)
+    const totalCols=Math.max(sh.headers.length||1,37);
+    row=new Array(totalCols).fill('');
+    row[0]='';                              // A: invoice # — auto by sheet
+    row[1]=S.formVals['id']||'';           // B: customer ID
+    row[2]=S.formVals['date']||today();     // C: date
     SKUS.forEach((sku,si)=>{
-      row[3 + si*2]     = sku.full;               // SKU name col
-      row[3 + si*2 + 1] = S.skuQtys[si]||'';    // qty col
+      row[3+si*2]  =sku.full;
+      row[3+si*2+1]=S.skuQtys[si]||'';
     });
-
-    row[25] = S.formVals['price']||'13';          // Z: price
-
-    // AA(26),AB(27),AC(28): calculated — leave ''
-    // AE(30): calculated — leave ''
-
-    row[29] = S.formVals['extra29']||'';          // AD: editable
-
-    if(isReceipt){
-      // Payment fields — place after AE if known, else skip index issues
-      // We'll store them in the extra editable positions known from sheet
-    }
-
-    // AK(36): editable
-    if(totalCols > 36) row[36] = S.formVals['extra36']||'';
-
-    // Any other editable extra fields
-    sh.headers.forEach((h,i)=>{
-      if(i>=26 && !SKIP_COLS.has(i) && EDITABLE_EXTRA.includes(i)){
-        row[i]=S.formVals['extra'+i]||'';
-      }
-    });
-
-    // Receipt payment + paydetail: find columns by header name
+    row[25]=S.formVals['price']||'13';     // Z: price per unit
+    // AA(26),AB(27),AC(28),AD/AE VAT col — all calculated by Google, leave ''
+    // Editable extra cols
+    EDITABLE_EXTRA.forEach(ci=>{ if(ci<totalCols) row[ci]=S.formVals['extra'+ci]||''; });
+    // Receipt: map payment fields by header name
     if(isReceipt){
       sh.headers.forEach((h,i)=>{
-        if(h==='אמצעי תשלום') row[i]=S.formVals['pay']||'';
-        if(h==='פרטים נוספים') row[i]=S.formVals['paydetail']||'';
+        if(h==='אמצעי תשלום')                          row[i]=S.formVals['pay']||'';
+        if(h==='מספר שיק')                             row[i]=S.formVals['checkNum']||'';
+        if(h==='תאריך פרעון שיק'||h==='תאריך תשלום') row[i]=S.formVals['checkDate']||'';
+        if(h==='צילום שיק')                            row[i]=S.formVals['checkPhoto']?'צולם':'';
       });
     }
-
-    // הערות: find column by header name
     sh.headers.forEach((h,i)=>{ if(h==='הערות') row[i]=S.formVals['notes']||''; });
-
   } else {
     row=sh.headers.map((_,i)=>S.formVals[i]||'');
   }
 
-  if(S.isDemo){
-    sh.rows.push(row); navBack();
-    saveBtn.textContent='שמור ✓'; saveBtn.disabled=false;
-    return;
-  }
+  if(S.isDemo){ sh.rows.push(row); navBack(); saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; return; }
 
   try{
     const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
     const data=await res.json();
     if(!data.ok)throw new Error(data.error);
-    // Re-fetch sheet to import calculated values from Google Sheets
     await refreshSheets();
     navBack();
   }catch(e){ alert('שגיאה בשמירה: '+e.message); }
