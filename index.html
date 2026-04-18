@@ -2,25 +2,23 @@
 <html lang="he">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>SalesDocs</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#1B2B4B;--dark:#0F1C32;--amber:#E8A020;--amberL:#F5C056;--cream:#F5F6FA;--white:#fff;--gray:#6B7A99;--border:#DDE3EE;--green:#16A34A;--red:#DC2626;}
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;background:var(--cream);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
-body{height:100dvh;overflow:hidden;}
-#app{max-width:480px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--cream);}
+html{height:100%;overflow:hidden;}
+body{margin:0;padding:0;background:#1B2B4B;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden;}
+#app{width:100%;max-width:430px;margin:0 auto;height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--cream);}
 
-/* ── SCREENS ────────────────────────────────── */
 .screen{display:none;flex-direction:column;height:100%;overflow:hidden;}
 .screen.active{display:flex;}
 
-/* ── CONFIG ─────────────────────────────────── */
-#s-config{overflow-y:auto;}
-.cfg-hero{background:linear-gradient(145deg,var(--navy),var(--dark));padding:44px 20px 32px;color:#fff;}
+/* ── CONFIG ── */
+#s-config{overflow-y:auto;height:100%;}
+.cfg-hero{background:linear-gradient(145deg,var(--navy),var(--dark));padding:44px 20px 32px;color:#fff;flex-shrink:0;}
 .cfg-brand{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-.cfg-brand svg{flex-shrink:0;}
 .cfg-brand span{font-size:20px;font-weight:700;}
 .cfg-hero h1{font-size:23px;font-weight:300;line-height:1.4;margin:0 0 6px;}
 .cfg-hero h1 strong{font-weight:700;}
@@ -29,19 +27,28 @@ body{height:100dvh;overflow:hidden;}
 .card{background:#fff;border-radius:14px;padding:18px 16px;box-shadow:0 2px 10px rgba(27,43,75,.08);margin-bottom:12px;}
 .card-ttl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin-bottom:4px;}
 .card-sub{font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.5;}
+
+/* ── INPUTS ── */
 .flabel{display:block;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
 input[type=text],input[type=url],input[type=number],input[type=date],input[type=tel],input[type=email],textarea,select{
   width:100%;display:block;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;
   font-size:15px;color:var(--navy);background:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;
+  -webkit-appearance:none;appearance:none;
 }
 input:focus,textarea:focus,select:focus{border-color:var(--amber);}
-textarea{resize:vertical;min-height:68px;}
+input:disabled,textarea:disabled,select:disabled{background:#F3F4F8;color:#9AA3B5;cursor:not-allowed;}
+textarea{resize:none;min-height:72px;}
 .fgrp{margin-bottom:13px;}
+.input-hint{font-size:11px;color:var(--gray);margin-top:4px;}
+
+/* ── BUTTONS ── */
 .btn-P{display:block;width:100%;padding:14px;border:none;border-radius:11px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--navy);color:#fff;transition:.15s;}
-.btn-P:hover{background:#243B62;} .btn-P:disabled{background:#8899BB;cursor:not-allowed;}
+.btn-P:disabled{background:#8899BB;cursor:not-allowed;}
 .btn-O{display:block;width:100%;padding:13px;border:2px solid var(--border);border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:transparent;color:var(--navy);transition:.15s;}
-.btn-O:hover{border-color:var(--navy);}
 .err{background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:11px 13px;margin-bottom:14px;color:var(--red);font-size:13px;line-height:1.5;}
+.customer-found{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px;margin-top:6px;font-size:13px;color:#166534;font-weight:500;display:none;}
+
+/* ── ADMIN GUIDE ── */
 details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;user-select:none;}
 .setup-step{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;color:#374151;line-height:1.65;}
 .setup-step:last-child{border-bottom:none;}
@@ -50,22 +57,22 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .code-box pre{margin:0;color:#A5F3FC;font-size:10.5px;line-height:1.75;font-family:monospace;white-space:pre-wrap;word-break:break-word;}
 .cbtn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:6px;}
 
-/* ── LOADING ─────────────────────────────────── */
+/* ── LOADING ── */
 #s-loading .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
 .spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* ── APP SHELL ───────────────────────────────── */
+/* ── APP SHELL ── */
 .top-bar{background:var(--navy);display:flex;align-items:center;gap:10px;padding:0 14px;height:54px;flex-shrink:0;}
 .tb-back{background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#fff;padding:6px 10px;font-size:16px;cursor:pointer;line-height:1;display:none;}
 .tb-back.visible{display:block;}
 .tb-title{color:#fff;font-weight:700;font-size:17px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tb-meta{color:rgba(255,255,255,.45);font-size:11px;margin-top:1px;}
-.tb-add{background:var(--amber);border:none;border-radius:9px;color:var(--navy);font-weight:700;font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:.15s;}
-.tb-add:hover{background:var(--amberL);}
+.tb-add{background:var(--amber);border:none;border-radius:9px;color:var(--navy);font-weight:700;font-size:22px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;line-height:1;}
 .tb-add.hidden{display:none;}
-.tb-save{background:var(--amber);border:none;border-radius:9px;color:var(--navy);font-weight:700;font-size:13px;padding:7px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none;}
+.tb-save{background:var(--amber);border:none;border-radius:9px;color:var(--navy);font-weight:700;font-size:13px;padding:7px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;display:none;white-space:nowrap;}
 .tb-save.visible{display:block;}
+.tb-save:disabled{background:#C8A030;cursor:not-allowed;}
 
 .bottom-nav{background:#fff;border-top:1px solid var(--border);display:flex;flex-shrink:0;}
 .nav-tab{flex:1;background:none;border:none;border-top:2px solid transparent;padding:9px 4px 11px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--gray);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.12s;overflow:hidden;}
@@ -73,16 +80,15 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .nav-tab-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nav-icon{font-size:17px;}
 
-.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
 
-/* ── LIST VIEW ───────────────────────────────── */
+/* ── LIST VIEW ── */
 .search-wrap{padding:10px 14px 6px;background:var(--cream);position:sticky;top:0;z-index:10;}
 .search-box{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);border-radius:22px;padding:0 14px;transition:border-color .15s;}
 .search-box:focus-within{border-color:var(--amber);}
 .search-icon{color:var(--gray);font-size:15px;flex-shrink:0;}
 .search-inp{flex:1;border:none;outline:none;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--navy);padding:9px 0;background:transparent;}
 .list-meta{padding:4px 14px 6px;font-size:12px;color:var(--gray);}
-
 .list-item{background:#fff;border-bottom:1px solid var(--border);}
 .li-main{display:flex;align-items:center;gap:8px;padding:11px 14px;}
 .li-info{flex:1;min-width:0;}
@@ -91,57 +97,59 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .li-r3{font-size:11px;color:var(--gray);margin-top:1px;direction:rtl;text-align:right;}
 .li-btns{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:.15s;}
-.icon-btn:active{background:var(--cream);}
 .icon-btn.ok{border-color:var(--green);color:var(--green);}
-.chev{background:none;border:1px solid var(--border);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);font-size:11px;transition:.15s;}
+.chev{background:none;border:1px solid var(--border);border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gray);font-size:11px;}
 .chev.open{background:var(--navy);color:#fff;border-color:var(--navy);}
-
 .li-expanded{padding:4px 14px 12px;background:#FAFBFE;direction:rtl;}
 .ex-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;gap:10px;}
 .ex-row:last-child{border-bottom:none;}
 .ex-lbl{color:var(--gray);flex-shrink:0;font-size:12px;}
 .ex-val{color:var(--navy);font-weight:500;text-align:right;word-break:break-word;}
-
 .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px;text-align:center;color:var(--gray);}
 .empty-icon{font-size:38px;}
 
-/* ── FORM VIEW ───────────────────────────────── */
-.total-bar{background:var(--dark);display:flex;align-items:center;justify-content:space-between;padding:10px 16px;flex-shrink:0;}
-.total-lbl{font-size:12px;color:rgba(255,255,255,.5);}
-.total-val{font-size:26px;font-weight:700;color:var(--amber);line-height:1;}
-.total-unit{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
-.total-right{text-align:right;}
+/* ── FORM VIEW ── */
+.total-bar{background:var(--dark);display:flex;align-items:center;justify-content:center;padding:10px 16px;flex-shrink:0;}
+.total-inner{text-align:center;}
+.total-lbl{font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;}
+.total-val{font-size:32px;font-weight:700;color:var(--amber);line-height:1;}
+.total-unit{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;}
 
-.form-scroll{flex:1;overflow-y:auto;padding-bottom:40px;}
+.form-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:60px;}
 .fsec{padding:14px 14px 0;}
 .fsec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+/* Payment type radio buttons */
+.pay-options{display:flex;gap:8px;margin-bottom:4px;}
+.pay-opt{flex:1;position:relative;}
+.pay-opt input[type=radio]{position:absolute;opacity:0;width:0;height:0;}
+.pay-opt label{display:flex;align-items:center;justify-content:center;padding:9px 4px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;transition:.15s;text-align:center;}
+.pay-opt input[type=radio]:checked+label{border-color:var(--amber);background:#FFF8EC;color:var(--navy);}
 
 /* SKU LIST */
 .sku-list{padding:0 14px;}
 .sku-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;}
 .sku-row:last-child{border-bottom:none;}
-.sku-name-wrap{flex:1;}
+.sku-name-wrap{flex:1;min-width:0;}
 .sku-short{font-size:14px;font-weight:600;color:var(--navy);}
-.sku-full{font-size:11px;color:var(--gray);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
-.stepper{display:flex;align-items:center;gap:6px;direction:ltr;flex-shrink:0;}
-.st-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--navy);font-family:'DM Sans',sans-serif;transition:.12s;padding:0;}
-.st-btn:active{background:var(--cream);}
+.sku-full{font-size:11px;color:var(--gray);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.stepper{display:flex;align-items:center;gap:5px;direction:ltr;flex-shrink:0;}
+.st-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--navy);font-family:'DM Sans',sans-serif;padding:0;}
 .st-btn.plus{border-color:var(--navy);}
-.st-inp{width:40px;text-align:center;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:600;padding:4px 0;color:var(--navy);font-family:'DM Sans',sans-serif;outline:none;direction:ltr;}
+.st-inp{width:42px;text-align:center;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-weight:600;padding:5px 0;color:var(--navy);font-family:'DM Sans',sans-serif;outline:none;direction:ltr;}
 .st-inp:focus{border-color:var(--amber);}
 .st-inp.has-v{border-color:var(--amber);background:#FFF8EC;}
 
 .order-row{display:flex;gap:10px;}
 .order-row .fgrp{flex:1;}
 
-/* Demo bar */
 .demo-bar{background:#FFF3CD;border-bottom:1px solid #F0C030;padding:7px 16px;font-size:12px;color:#856404;font-weight:500;text-align:center;flex-shrink:0;}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ════════════════ CONFIG ════════════════ -->
+<!-- ══════════════════ CONFIG ══════════════════ -->
 <div id="s-config" class="screen active">
   <div class="cfg-hero">
     <div class="cfg-brand">
@@ -171,8 +179,8 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
           <div class="setup-step"><div class="snum">1</div><div>פתח את גיליון Google של איש המכירות ← <strong>Extensions → Apps Script</strong></div></div>
           <div class="setup-step"><div class="snum">2</div><div>מחק כל קוד קיים. הדבק את הסקריפט למטה ולחץ <strong>Save 💾</strong></div></div>
           <div class="setup-step"><div class="snum">3</div><div><strong>Deploy → New deployment</strong><br>• Type: <strong>Web app</strong><br>• Execute as: <strong>Me</strong><br>• Who has access: <strong>Anyone</strong><br>לחץ <strong>Deploy</strong></div></div>
-          <div class="setup-step"><div class="snum">4</div><div>Google מבקש הרשאה — לחץ <strong>Review permissions → Allow</strong> (בטוח ונורמלי)</div></div>
-          <div class="setup-step"><div class="snum">5</div><div>העתק את ה-<strong>Web app URL</strong> ושלח לאיש המכירות — זה ה-URL האישי שלהם.</div></div>
+          <div class="setup-step"><div class="snum">4</div><div>Google מבקש הרשאה — לחץ <strong>Review permissions → Allow</strong></div></div>
+          <div class="setup-step"><div class="snum">5</div><div>העתק את ה-<strong>Web app URL</strong> ושלח לאיש המכירות.</div></div>
           <div class="code-box">
             <button class="cbtn" onclick="copyScript()">📋 Copy script</button>
             <pre id="script-txt">function doGet() {
@@ -206,92 +214,85 @@ function doPost(e) {
   }
 }</pre>
           </div>
-          <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ אם כבר פרסת גרסה ישנה — חייב לפרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת) כדי לקבל URL חדש עם הקוד המעודכן.</p>
+          <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ תמיד פרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת).</p>
         </div>
       </details>
     </div>
   </div>
 </div>
 
-<!-- ════════════════ LOADING ════════════════ -->
+<!-- ══════════════════ LOADING ══════════════════ -->
 <div id="s-loading" class="screen">
   <div class="center"><div class="spinner"></div><p style="color:var(--gray);font-size:15px;margin:0">טוען גיליון…</p></div>
 </div>
 
-<!-- ════════════════ APP ════════════════ -->
+<!-- ══════════════════ APP ══════════════════ -->
 <div id="s-app" class="screen">
   <div class="top-bar">
     <button class="tb-back" id="tb-back" onclick="navBack()">←</button>
     <div style="flex:1;min-width:0;">
       <div class="tb-title" id="tb-title">SalesDocs</div>
-      <div class="tb-meta" id="tb-meta"></div>
+      <div class="tb-meta"  id="tb-meta"></div>
     </div>
-    <button class="tb-add" id="tb-add" onclick="showForm()">+</button>
+    <button class="tb-add"  id="tb-add"  onclick="showForm()">+</button>
     <button class="tb-save" id="tb-save" onclick="submitForm()">שמור ✓</button>
   </div>
-
   <div id="demo-bar" class="demo-bar" style="display:none">👁 Demo Mode — שינויים לא נשמרים</div>
-
-  <div class="content" id="content"><!-- rendered dynamically --></div>
-
+  <div class="content" id="content"></div>
   <div class="bottom-nav" id="bottom-nav"></div>
 </div>
 
 </div><!-- #app -->
 <script>
-/* ════════════════════════════════════════════════════════════════
-   SalesDocs — Customers + Invoice with SKUs
-   ════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   SalesDocs — v3  (all 6 improvements)
+   ═══════════════════════════════════════════════════════════ */
 
-// ── SKU definitions (order matches sheet columns D,F,H,J,L,N,P,R,T,V,X)
+// SKU definitions — short label + full name used in sheet header
 const SKUS = [
-  { short:'Blueb 10', size:10 },
-  { short:'Blueb 6',  size:6  },
-  { short:'Lime 14',  size:14 },
-  { short:'Lime 6',   size:6  },
-  { short:'Peppe 20', size:20 },
-  { short:'Peppe 10', size:10 },
-  { short:'Peppe 3',  size:3  },
-  { short:'Raspb 10', size:10 },
-  { short:'Water 20', size:20 },
-  { short:'Water 14', size:14 },
-  { short:'Banan 3',  size:3  },
+  { short:'Blueb 10',  full:'Blueberry Mint 10'  },
+  { short:'Blueb 6',   full:'Blueberry Mint 6'   },
+  { short:'Lime 14',   full:'Jalapeno Lime 14'   },
+  { short:'Lime 6',    full:'Jalapeno Lime 6'     },
+  { short:'Peppe 20',  full:'Peppermint 20'       },
+  { short:'Peppe 10',  full:'Peppermint 10'       },
+  { short:'Peppe 3',   full:'Peppermint 3'        },
+  { short:'Raspb 10',  full:'Raspberry 10'        },
+  { short:'Water 20',  full:'Watermelon 20'       },
+  { short:'Water 14',  full:'Watermelon 14'       },
+  { short:'Banan 3',   full:'Banana 3'            },
 ];
-// SKU name columns (0-based): D=3, F=5, H=7, J=9, L=11, N=13, P=15, R=17, T=19, V=21, X=23
-// SKU qty  columns (0-based): E=4, G=6, I=8, K=10, M=12, O=14, Q=16, S=18, U=20, W=22, Y=24
-const SKU_NAME_COLS = [3,5,7,9,11,13,15,17,19,21,23];
-const SKU_QTY_COLS  = [4,6,8,10,12,14,16,18,20,22,24];
+const SKU_QTY_COLS = [4,6,8,10,12,14,16,18,20,22,24]; // 0-based cols for quantities
 
 // ── State
 let S = {
-  scriptUrl: null,
-  isDemo: false,
-  sheets: {},       // name → { headers:[], rows:[][] }
+  scriptUrl: null, isDemo: false,
+  sheets: {},      // name → { headers, rows }
   sheetNames: [],
-  tab: '',          // current sheet name
-  view: 'list',     // 'list' | 'form'
-  search: '',
-  expanded: -1,
+  tab: '', view: 'list',
+  search: '', expanded: -1,
   skuQtys: new Array(11).fill(0),
-  skuFullNames: [],  // read from sheet headers
-  formVals: {},      // colIdx → value, for new record header fields
+  skuFullNames: [],
+  formVals: {},
 };
-const timers = {};
 
-// ── Helpers
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('s-'+id).classList.add('active');}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function showCfgErr(msg){const e=document.getElementById('cfg-err');e.textContent=msg;e.style.display=msg?'block':'none';}
-function isInvoiceSheet(name){return !name.includes('לקוח');}
-function sheetIcon(name){if(name.includes('לקוח'))return'👥';if(name.includes('קבל'))return'🧾';return'📋';}
+// ── Utils
+const $  = id => document.getElementById(id);
+const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function isInvSheet(name){ return name.includes('חשבוני') && !name.includes('לקוח'); }
+function isReceiptSheet(name){ return name.includes('קבל') || (name.includes('חשבוני') && name.includes('קבל')); }
+function sheetIcon(name){ if(name.includes('לקוח'))return'👥'; if(name.includes('קבל'))return'🧾'; return'📋'; }
+
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $('s-'+id).classList.add('active'); }
+function showCfgErr(msg){ const e=$('cfg-err'); e.textContent=msg; e.style.display=msg?'block':'none'; }
 
 // ── Connect
 async function connectScript(){
-  const url=document.getElementById('inp-url').value.trim();
+  const url=$('inp-url').value.trim();
   showCfgErr('');
   if(!url){showCfgErr('נא להדביק URL.');return;}
-  const btn=document.getElementById('btn-connect');
-  btn.disabled=true;btn.textContent='מתחבר…';
+  const btn=$('btn-connect'); btn.disabled=true; btn.textContent='מתחבר…';
   showScreen('loading');
   try{
     const res=await fetch(url);
@@ -301,14 +302,13 @@ async function connectScript(){
     try{localStorage.setItem('sd_url',url);}catch{}
     launch(url,data.sheets,false);
   }catch(e){
-    showCfgErr('לא ניתן להתחבר: '+e.message);
-    showScreen('config');
-  }finally{btn.disabled=false;btn.textContent='פתח את הטופס שלי ←';}
+    showCfgErr('לא ניתן להתחבר: '+e.message); showScreen('config');
+  }finally{ btn.disabled=false; btn.textContent='פתח את הטופס שלי ←'; }
 }
 
 // ── Demo data
-const DEMO_SHEETS = [
-  { name:'לקוחות', rows:[
+const DEMO_SHEETS=[
+  {name:'לקוחות',rows:[
     ['שם לקוח','ת"ז / ח"פ','שם העסק','טלפון'],
     ['קובי','514064930','ק.ח הפצת משקאות','0500000001'],
     ['שחר','558511358','פרלמנט אקספרס','0500000002'],
@@ -316,96 +316,72 @@ const DEMO_SHEETS = [
     ['יניב','514557834','י.כ. השרות לקיוסק','0500000004'],
     ['רפאל','015933591','החנוני','0500000005'],
   ]},
-  { name:'חשבוניות', rows:[
-    ['מספר','לקוח','תאריך','Blueberry Mint 10','כמות','Blueberry Mint 6','כמות','Jalapeno Lime 14','כמות','Jalapeno Lime 6','כמות','Peppermint 20','כמות','Peppermint 10','כמות','Peppermint 3','כמות','Raspberry 10','כמות','Watermelon 20','כמות','Watermelon 14','כמות','Banana 3','כמות','מחיר','הנחה'],
-    [84,'קובי','2026-01-10','Blueberry Mint 10',7,'Blueberry Mint 6',4,'Jalapeno Lime 14',7,'Jalapeno Lime 6',4,'','','','','','','','','','','','','',5,250,10],
-    [85,'שחר','2026-01-11','Blueberry Mint 10',5,'Blueberry Mint 6','','','','','','Peppermint 20',5,'','','','','','','','','','','','',180,0],
+  {name:'חשבוניות',rows:[
+    ['מספר','לקוח','תאריך','Blueberry Mint 10','כמות','Blueberry Mint 6','כמות','Jalapeno Lime 14','כמות','Jalapeno Lime 6','כמות','Peppermint 20','כמות','Peppermint 10','כמות','Peppermint 3','כמות','Raspberry 10','כמות','Watermelon 20','כמות','Watermelon 14','כמות','Banana 3','כמות','מחיר','הנחה','הערות'],
+    [84,'514064930','2026-01-10','Blueberry Mint 10',7,'Blueberry Mint 6',4,'Jalapeno Lime 14',7,'','','','','','','','','','','','','','',13,10,''],
+    [85,'558511358','2026-01-11','','','','','','','','','Peppermint 20',5,'','','','','','','','','','',13,0,''],
   ]},
-  { name:'חשבונית/קבלה', rows:[
-    ['מספר','לקוח','תאריך','Blueberry Mint 10','כמות','Blueberry Mint 6','כמות','Jalapeno Lime 14','כמות','Jalapeno Lime 6','כמות','Peppermint 20','כמות','Peppermint 10','כמות','Peppermint 3','כמות','Raspberry 10','כמות','Watermelon 20','כמות','Watermelon 14','כמות','Banana 3','כמות','מחיר','הנחה'],
-    [1,'יניב','2026-01-09','Blueberry Mint 10',10,'','','Jalapeno Lime 14',5,'','','','','','','','','','','','','','','',320,15],
+  {name:'חשבונית/קבלה',rows:[
+    ['מספר','לקוח','תאריך','Blueberry Mint 10','כמות','Blueberry Mint 6','כמות','Jalapeno Lime 14','כמות','Jalapeno Lime 6','כמות','Peppermint 20','כמות','Peppermint 10','כמות','Peppermint 3','כמות','Raspberry 10','כמות','Watermelon 20','כמות','Watermelon 14','כמות','Banana 3','כמות','מחיר','הנחה','אמצעי תשלום','פרטים נוספים','הערות'],
+    [1,'514557834','2026-01-09','','','','','Jalapeno Lime 14',5,'','','','','','','','','','','','','','',13,15,'מזומן','',''],
   ]},
 ];
 
-function launchDemo(){launch(null,DEMO_SHEETS,true);}
+function launchDemo(){ launch(null,DEMO_SHEETS,true); }
 
 function launch(url,rawSheets,isDemo){
   S.scriptUrl=url; S.isDemo=isDemo;
   S.sheets={}; S.sheetNames=[];
   rawSheets.forEach(sh=>{
     S.sheetNames.push(sh.name);
-    const headers=sh.rows[0]||[];
+    const headers=(sh.rows[0]||[]);
     const rows=sh.rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
     S.sheets[sh.name]={headers,rows};
   });
-  S.tab=S.sheetNames[0]||'';
-  S.view='list'; S.search=''; S.expanded=-1;
-  document.getElementById('demo-bar').style.display=isDemo?'block':'none';
-  buildNav();
-  renderList();
-  showScreen('app');
+  S.tab=S.sheetNames[0]||''; S.view='list'; S.search=''; S.expanded=-1;
+  $('demo-bar').style.display=isDemo?'block':'none';
+  buildNav(); renderList(); showScreen('app');
 }
 
-// ── Bottom nav
+// ── Nav
 function buildNav(){
-  const nav=document.getElementById('bottom-nav');
-  nav.innerHTML='';
+  const nav=$('bottom-nav'); nav.innerHTML='';
   S.sheetNames.forEach(name=>{
     const b=document.createElement('button');
     b.className='nav-tab'+(name===S.tab?' active':'');
     b.onclick=()=>switchTab(name);
-    const rowCount=S.sheets[name]?.rows.length||0;
     b.innerHTML=`<span class="nav-icon">${sheetIcon(name)}</span><span class="nav-tab-name">${esc(name)}</span>`;
-    b.title=name+' ('+rowCount+')';
     nav.appendChild(b);
   });
 }
 function switchTab(name){
-  if(S.view==='form'){navBack();}
+  if(S.view==='form')navBack();
   S.tab=name; S.search=''; S.expanded=-1;
   document.querySelectorAll('.nav-tab').forEach((b,i)=>b.classList.toggle('active',S.sheetNames[i]===name));
   renderList();
 }
 
-// ── Top bar state
+// ── Top bar
 function setTopBar(view){
-  const back=document.getElementById('tb-back');
-  const title=document.getElementById('tb-title');
-  const meta=document.getElementById('tb-meta');
-  const add=document.getElementById('tb-add');
-  const save=document.getElementById('tb-save');
-  const nav=document.getElementById('bottom-nav');
-
+  const back=$('tb-back'), title=$('tb-title'), meta=$('tb-meta'),
+        add=$('tb-add'), save=$('tb-save'), nav=$('bottom-nav');
   if(view==='list'){
-    back.classList.remove('visible');
-    title.textContent=S.tab;
-    const count=S.sheets[S.tab]?.rows.length||0;
-    meta.textContent=count+' רשומות';
-    add.classList.remove('hidden');
-    save.classList.remove('visible');
-    nav.style.display='flex';
+    back.classList.remove('visible'); title.textContent=S.tab;
+    meta.textContent=(S.sheets[S.tab]?.rows.length||0)+' רשומות';
+    add.classList.remove('hidden'); save.classList.remove('visible'); nav.style.display='flex';
   } else {
     back.classList.add('visible');
-    const isInv=isInvoiceSheet(S.tab);
-    title.textContent=isInv?'חשבונית חדשה':'לקוח חדש';
-    meta.textContent='';
-    add.classList.add('hidden');
-    save.classList.add('visible');
-    nav.style.display='none';
+    title.textContent=isInvSheet(S.tab)||isReceiptSheet(S.tab)?'חשבונית חדשה':'לקוח חדש';
+    meta.textContent=''; add.classList.add('hidden'); save.classList.add('visible'); nav.style.display='none';
   }
 }
 
-// ── Render list
+// ── LIST
 function renderList(){
-  S.view='list';
-  setTopBar('list');
-  const sh=S.sheets[S.tab];
-  const content=document.getElementById('content');
-
-  const q=S.search.toLowerCase();
-  const filtered=(sh?.rows||[]).filter(row=>
-    !q||row.some(c=>String(c).toLowerCase().includes(q))
-  );
+  S.view='list'; setTopBar('list');
+  const sh=S.sheets[S.tab]; const q=S.search.toLowerCase();
+  const rows=sh?.rows||[];
+  const filtered=rows.filter(r=>!q||r.some(c=>String(c).toLowerCase().includes(q)));
 
   let html=`
     <div class="search-wrap">
@@ -414,254 +390,314 @@ function renderList(){
         <input class="search-inp" type="search" placeholder="חיפוש…" value="${esc(S.search)}" oninput="onSearch(this.value)">
       </div>
     </div>
-    <div class="list-meta">${filtered.length} מתוך ${sh?.rows.length||0} רשומות</div>`;
+    <div class="list-meta">${filtered.length} מתוך ${rows.length} רשומות</div>`;
 
   if(!filtered.length){
     html+=`<div class="empty"><div class="empty-icon">🔎</div><div>לא נמצאו רשומות</div></div>`;
   } else {
-    filtered.forEach((row,idx)=>{
-      const realIdx=(sh?.rows||[]).indexOf(row);
-      const c0=esc(row[0]||'');
-      const c1=esc(row[1]||'');
-      const c2=esc(row[2]||'');
-      const isExp=S.expanded===realIdx;
+    filtered.forEach(row=>{
+      const ri=rows.indexOf(row);
+      const isExp=S.expanded===ri;
       html+=`<div class="list-item">
         <div class="li-main">
           <div class="li-info">
-            <div class="li-r1">${c0}</div>
-            ${c1?`<div class="li-r2">${c1}</div>`:''}
-            ${c2?`<div class="li-r3">${c2}</div>`:''}
+            <div class="li-r1">${esc(row[0])}</div>
+            ${row[1]?`<div class="li-r2">${esc(row[1])}</div>`:''}
+            ${row[2]?`<div class="li-r3">${esc(row[2])}</div>`:''}
           </div>
           <div class="li-btns">
-            <div class="icon-btn" id="copy-${realIdx}" title="העתק עמודה B" onclick="copyCol(${realIdx},'${esc(String(row[1]||''))}')">📋</div>
-            <div class="chev${isExp?' open':''}" onclick="toggleExpand(${realIdx})">${isExp?'▲':'▼'}</div>
+            <div class="icon-btn" id="cp-${ri}" onclick="copyVal(${ri},'${esc(String(row[1]||''))}')">📋</div>
+            <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
           </div>
         </div>`;
       if(isExp){
         html+=`<div class="li-expanded">`;
         (sh?.headers||[]).forEach((h,hi)=>{
-          if(row[hi]===''||row[hi]===null||row[hi]===undefined)return;
-          html+=`<div class="ex-row"><span class="ex-lbl">${esc(h)}</span><span class="ex-val">${esc(String(row[hi]))}</span></div>`;
+          const v=row[hi]; if(v===''||v===null||v===undefined)return;
+          html+=`<div class="ex-row"><span class="ex-lbl">${esc(h)}</span><span class="ex-val">${esc(String(v))}</span></div>`;
         });
         html+=`</div>`;
       }
       html+=`</div>`;
     });
   }
-  content.innerHTML=html;
+  $('content').innerHTML=html;
 }
 
-function onSearch(val){S.search=val;S.expanded=-1;renderList();}
-
-function toggleExpand(idx){
-  S.expanded=S.expanded===idx?-1:idx;
-  renderList();
-  // scroll to item
-  setTimeout(()=>{
-    const el=document.getElementById('content');
-    const items=el.querySelectorAll('.list-item');
-    const sh=S.sheets[S.tab];
-    const pos=(sh?.rows||[]).findIndex((_,i)=>i===S.expanded);
-    if(pos>=0&&items[pos])items[pos].scrollIntoView({behavior:'smooth',block:'nearest'});
-  },50);
-}
-
-function copyCol(idx, val){
+function onSearch(v){ S.search=v; S.expanded=-1; renderList(); }
+function toggleExp(ri){ S.expanded=S.expanded===ri?-1:ri; renderList(); }
+function copyVal(ri,val){
   navigator.clipboard.writeText(val).then(()=>{
-    const el=document.getElementById('copy-'+idx);
-    if(!el)return;
-    el.textContent='✅';el.classList.add('ok');
+    const el=$('cp-'+ri); if(!el)return;
+    el.textContent='✅'; el.classList.add('ok');
     setTimeout(()=>{el.textContent='📋';el.classList.remove('ok');},2000);
-  }).catch(()=>alert('Copy: '+val));
+  }).catch(()=>alert(val));
 }
 
-// ── Show form
+// ── FORM
 function showForm(){
-  S.view='form';
-  S.skuQtys=new Array(11).fill(0);
-  S.formVals={};
+  S.view='form'; S.skuQtys=new Array(11).fill(0); S.formVals={};
   setTopBar('form');
-  const isInv=isInvoiceSheet(S.tab);
-  // Read SKU full names from headers
+  const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
   const headers=S.sheets[S.tab]?.headers||[];
-  S.skuFullNames=SKU_NAME_COLS.map(i=>headers[i]||'');
+  S.skuFullNames=SKUS.map(s=>s.full);  // use our known names
   if(isInv) renderInvoiceForm();
   else renderCustomerForm();
 }
+function navBack(){ S.view='list'; buildNav(); renderList(); }
 
-function navBack(){
-  S.view='list';
-  buildNav();
-  renderList();
-}
-
-// ── Customer form
+// ── Customer form — lookup by ID, fields locked until ID entered
 function renderCustomerForm(){
   const headers=S.sheets[S.tab]?.headers||[];
-  const content=document.getElementById('content');
-  let html=`<div class="form-scroll"><div class="fsec"><div class="fsec-title">פרטי לקוח חדש</div>`;
+  let html=`<div class="form-scroll"><div class="fsec"><div class="fsec-title">לקוח חדש</div>`;
+
   headers.forEach((h,i)=>{
-    if(!h)return;
-    html+=`<div class="fgrp"><label class="flabel">${esc(h)}</label>
-      <input type="text" id="cf-${i}" value="" oninput="S.formVals[${i}]=this.value" placeholder="הזן ${esc(h)}…">
-    </div>`;
+    const isId=i===1; // column B = ת"ז / ח"פ — enter first
+    if(i===0){
+      // Name — auto-filled from ID lookup, disabled until ID filled
+      html+=`<div class="fgrp">
+        <label class="flabel">${esc(h)}</label>
+        <input type="text" id="cf-0" value="" disabled placeholder="ימולא אוטומטית לאחר הזנת ת''ז">
+      </div>`;
+    } else if(isId){
+      html+=`<div class="fgrp">
+        <label class="flabel">${esc(h)}</label>
+        <input type="text" id="cf-1" value="" placeholder="הזן ת''ז / ח''פ" oninput="S.formVals[1]=this.value" onblur="lookupCustomer(this.value,false)">
+        <div class="customer-found" id="cust-found"></div>
+        <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית</div>
+      </div>`;
+    } else {
+      html+=`<div class="fgrp">
+        <label class="flabel">${esc(h)}</label>
+        <input type="text" id="cf-${i}" value="" disabled placeholder="הזן ${esc(h)}…" oninput="S.formVals[${i}]=this.value">
+      </div>`;
+    }
   });
   html+=`</div></div>`;
-  content.innerHTML=html;
+  $('content').innerHTML=html;
+}
+
+function lookupCustomer(idVal, isInvoice){
+  idVal=(idVal||'').trim();
+  if(!idVal) return;
+  // Search לקוחות sheet
+  const custSheet=S.sheets['לקוחות'];
+  if(!custSheet) return;
+  const match=custSheet.rows.find(r=>String(r[1]||'').trim()===idVal);
+  if(isInvoice){
+    // Fill customer name display in invoice form
+    const lbl=$('inv-cust-name');
+    if(match){
+      if(lbl){lbl.textContent=match[0]||'';lbl.style.display='block';}
+      S.formVals['custName']=match[0]||'';
+      enableInvoiceFields(true);
+    } else {
+      if(lbl){lbl.textContent='לקוח לא נמצא';lbl.style.color='var(--red)';lbl.style.display='block';}
+      enableInvoiceFields(false);
+    }
+  } else {
+    // Fill customer form fields
+    if(match){
+      const nameInp=$('cf-0');
+      if(nameInp){nameInp.value=match[0]||'';S.formVals[0]=match[0]||'';}
+      const found=$('cust-found');
+      if(found){found.textContent='✓ לקוח קיים: '+match[0];found.style.display='block';}
+      // enable all fields
+      document.querySelectorAll('[id^=cf-]').forEach(el=>{el.disabled=false;});
+      // fill other known fields
+      match.forEach((v,i)=>{
+        const el=$('cf-'+i);
+        if(el&&i!==0&&i!==1){el.value=v||'';S.formVals[i]=v||'';}
+      });
+    } else {
+      // New customer — enable fields, clear name
+      document.querySelectorAll('[id^=cf-]').forEach(el=>{el.disabled=false;});
+      const found=$('cust-found'); if(found)found.style.display='none';
+    }
+  }
+}
+
+function enableInvoiceFields(on){
+  document.querySelectorAll('.inv-field').forEach(el=>{el.disabled=!on;});
+  document.querySelectorAll('.st-btn,.st-inp').forEach(el=>{el.disabled=!on;});
 }
 
 // ── Invoice form
 function renderInvoiceForm(){
-  const headers=S.sheets[S.tab]?.headers||[];
-  const content=document.getElementById('content');
-
-  // Header fields (first 3 columns: A,B,C)
-  const headerFields=headers.slice(0,3);
-
+  const isReceipt=isReceiptSheet(S.tab);
+  const content=$('content');
   let html=`
     <div class="total-bar">
-      <div><div class="total-lbl">סה״כ פחיות</div><div class="total-val" id="total-cans">0</div></div>
-      <div class="total-right"><div class="total-lbl">סה״כ יחידות</div><div class="total-val" id="total-units">0</div></div>
+      <div class="total-inner">
+        <div class="total-lbl">סה״כ יחידות בהזמנה</div>
+        <div class="total-val" id="total-units">0</div>
+      </div>
     </div>
     <div class="form-scroll">
       <div class="fsec">
-        <div class="fsec-title">פרטי הזמנה</div>`;
+        <div class="fsec-title">פרטי הזמנה</div>
 
-  // First 3 header fields in a flex row / vertical
-  headerFields.forEach((h,i)=>{
-    if(!h)return;
-    const itype=i===2?'date':'text';
-    html+=`<div class="fgrp"><label class="flabel">${esc(h)}</label>
-      <input type="${itype}" id="hf-${i}" oninput="S.formVals[${i}]=this.value" placeholder="${itype==='date'?'':'הזן '+esc(h)+'…'}">
-    </div>`;
-  });
+        <div class="fgrp">
+          <label class="flabel">ת"ז / ח"פ לקוח</label>
+          <input type="text" id="inv-id" placeholder="הזן ת''ז / ח''פ" oninput="S.formVals['id']=this.value" onblur="lookupCustomer(this.value,true)">
+          <div class="customer-found" id="inv-cust-name"></div>
+          <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית. שאר השדות ינעלו עד להזנת ת''ז.</div>
+        </div>
 
-  html+=`</div>
-    <div class="fsec"><div class="fsec-title">מוצרים (11 SKU)</div></div>
-    <div class="sku-list">`;
+        <div class="fgrp">
+          <label class="flabel">מספר חשבונית</label>
+          <input type="text" id="inv-num" class="inv-field" disabled placeholder="מספר חשבונית" oninput="S.formVals['num']=this.value">
+        </div>
+
+        <div class="fgrp">
+          <label class="flabel">תאריך</label>
+          <input type="date" id="inv-date" class="inv-field" disabled value="${today()}" oninput="S.formVals['date']=this.value">
+        </div>
+
+      </div>
+
+      <div class="fsec"><div class="fsec-title">מוצרים</div></div>
+      <div class="sku-list">`;
 
   SKUS.forEach((sku,si)=>{
-    const fullName=S.skuFullNames[si]||sku.short;
     html+=`<div class="sku-row">
       <div class="sku-name-wrap">
         <div class="sku-short">${esc(sku.short)}</div>
-        <div class="sku-full">${esc(fullName)}</div>
+        <div class="sku-full">${esc(sku.full)}</div>
       </div>
       <div class="stepper">
-        <button class="st-btn" onclick="adjQty(${si},-1)">−</button>
-        <input class="st-inp" id="qty-${si}" type="number" min="0" value="0" oninput="setQty(${si},this.value)">
-        <button class="st-btn plus" onclick="adjQty(${si},1)">+</button>
+        <button class="st-btn inv-field" disabled onclick="adjQty(${si},-1)">−</button>
+        <input class="st-inp inv-field" disabled id="qty-${si}" type="number" min="0" value="0" oninput="setQty(${si},this.value)">
+        <button class="st-btn plus inv-field" disabled onclick="adjQty(${si},1)">+</button>
       </div>
     </div>`;
   });
 
   html+=`</div>
-    <div class="fsec" style="padding-bottom:14px">
-      <div class="fsec-title">מחיר והנחה</div>
-      <div class="order-row">
-        <div class="fgrp"><label class="flabel">מחיר (₪)</label>
-          <input type="number" id="ord-price" min="0" oninput="S.formVals['price']=this.value" placeholder="0">
+
+      <div class="fsec" style="padding-bottom:6px">
+        <div class="fsec-title">מחיר והנחה</div>
+        <div class="order-row">
+          <div class="fgrp">
+            <label class="flabel">מחיר ליחידה (₪)</label>
+            <input type="number" id="inv-price" class="inv-field" disabled min="0" value="13" oninput="S.formVals['price']=this.value">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">הנחה (%)</label>
+            <input type="number" id="inv-disc" class="inv-field" disabled min="0" max="100" value="0" oninput="S.formVals['disc']=this.value">
+          </div>
         </div>
-        <div class="fgrp"><label class="flabel">הנחה (%)</label>
-          <input type="number" id="ord-disc" min="0" max="100" oninput="S.formVals['disc']=this.value" placeholder="0">
+      </div>`;
+
+  // Payment section — only for receipt sheet
+  if(isReceipt){
+    html+=`
+      <div class="fsec">
+        <div class="fsec-title">אמצעי תשלום</div>
+        <div class="pay-options">
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash" value="מזומן" onchange="S.formVals['pay']=this.value"><label for="pay-cash">💵 מזומן</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-check" value="צ'ק" onchange="S.formVals['pay']=this.value"><label for="pay-check">📝 צ'ק</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-transfer" value="העברה" onchange="S.formVals['pay']=this.value"><label for="pay-transfer">🏦 העברה</label></div>
+        </div>
+        <div class="fgrp" style="margin-top:10px">
+          <label class="flabel">פרטים נוספים</label>
+          <input type="text" id="inv-paydetail" class="inv-field" disabled placeholder="מספר צ'ק, אסמכתא וכד'…" oninput="S.formVals['paydetail']=this.value">
+        </div>
+      </div>`;
+  }
+
+  html+=`
+      <div class="fsec" style="padding-bottom:14px">
+        <div class="fsec-title">הערות</div>
+        <div class="fgrp">
+          <textarea id="inv-notes" class="inv-field" disabled placeholder="הערות לחשבונית…" oninput="S.formVals['notes']=this.value"></textarea>
         </div>
       </div>
-    </div>
-  </div>`;
+    </div>`;
 
   content.innerHTML=html;
+
+  // Set today's date as default
+  S.formVals['date']=today();
+  S.formVals['price']='13';
+  S.formVals['disc']='0';
 }
 
+// ── SKU steppers
 function adjQty(si,delta){
-  const cur=S.skuQtys[si]||0;
-  setQty(si,Math.max(0,cur+delta));
-  const inp=document.getElementById('qty-'+si);
-  if(inp)inp.value=S.skuQtys[si];
+  const n=Math.max(0,(S.skuQtys[si]||0)+delta);
+  S.skuQtys[si]=n;
+  const inp=$('qty-'+si); if(inp){inp.value=n;inp.classList.toggle('has-v',n>0);}
+  updateTotal();
 }
 function setQty(si,val){
   const n=Math.max(0,parseInt(val)||0);
   S.skuQtys[si]=n;
-  const inp=document.getElementById('qty-'+si);
-  if(inp){inp.value=n;inp.classList.toggle('has-v',n>0);}
+  const inp=$('qty-'+si); if(inp){inp.classList.toggle('has-v',n>0);}
   updateTotal();
 }
 function updateTotal(){
-  let cans=0,units=0;
-  SKUS.forEach((sku,i)=>{const q=S.skuQtys[i]||0;cans+=q*sku.size;units+=q;});
-  const tc=document.getElementById('total-cans');
-  const tu=document.getElementById('total-units');
-  if(tc)tc.textContent=cans;
-  if(tu)tu.textContent=units;
+  const total=S.skuQtys.reduce((s,q)=>s+(q||0),0);
+  const el=$('total-units'); if(el)el.textContent=total;
 }
 
-// ── Submit form
+// ── Submit
 async function submitForm(){
-  const sh=S.sheets[S.tab];
-  if(!sh)return;
-  const isInv=isInvoiceSheet(S.tab);
-  const saveBtn=document.getElementById('tb-save');
-  saveBtn.textContent='שומר…';saveBtn.disabled=true;
+  const sh=S.sheets[S.tab]; if(!sh)return;
+  const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
+  const isReceipt=isReceiptSheet(S.tab);
+  const saveBtn=$('tb-save'); saveBtn.textContent='שומר…'; saveBtn.disabled=true;
 
-  let row;
+  let row=[];
   if(isInv){
-    // Build row: [col0, col1, col2, SKU1name, qty1, SKU2name, qty2, ..., price, disc]
-    const h=sh.headers;
-    row=[];
-    // Header fields (A, B, C)
-    for(let i=0;i<3;i++) row.push(S.formVals[i]||'');
-    // SKU pairs
+    // A: invoice number, B: customer ID, C: date
+    row.push(S.formVals['num']||'');
+    row.push(S.formVals['id']||'');
+    row.push(S.formVals['date']||today());
+    // SKU pairs: name col + qty col (11 pairs)
     SKUS.forEach((sku,si)=>{
-      row.push(S.skuFullNames[si]||sku.short); // SKU name col
-      row.push(S.skuQtys[si]||'');             // qty col
+      row.push(sku.full);           // SKU name
+      row.push(S.skuQtys[si]||''); // qty
     });
     // Price + discount
-    row.push(S.formVals['price']||'');
-    row.push(S.formVals['disc']||'');
+    row.push(S.formVals['price']||'13');
+    row.push(S.formVals['disc']||'0');
+    // Receipt-only fields
+    if(isReceipt){
+      row.push(S.formVals['pay']||'');
+      row.push(S.formVals['paydetail']||'');
+    }
+    // Notes (all invoice types)
+    row.push(S.formVals['notes']||'');
   } else {
-    // Customer: one value per header column
+    // Customer: all header columns
     row=sh.headers.map((_,i)=>S.formVals[i]||'');
   }
 
   if(S.isDemo){
-    // Demo: just add locally
-    sh.rows.push(row);
-    navBack();
-    saveBtn.textContent='שמור ✓';saveBtn.disabled=false;
+    sh.rows.push(row); navBack();
+    saveBtn.textContent='שמור ✓'; saveBtn.disabled=false;
     return;
   }
-
   try{
-    const res=await fetch(S.scriptUrl,{
-      method:'POST',
-      body:JSON.stringify({action:'append',sheet:S.tab,row})
-    });
+    const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
     const data=await res.json();
     if(!data.ok)throw new Error(data.error);
-    // Add locally too
-    sh.rows.push(row);
-    navBack();
-  }catch(e){
-    alert('שגיאה בשמירה: '+e.message);
-  }finally{
-    saveBtn.textContent='שמור ✓';saveBtn.disabled=false;
-  }
+    sh.rows.push(row); navBack();
+  }catch(e){ alert('שגיאה בשמירה: '+e.message); }
+  finally{ saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; }
 }
 
-// ── Script copy
+// ── Copy script button
 function copyScript(){
-  const txt=document.getElementById('script-txt').textContent;
-  navigator.clipboard.writeText(txt).then(()=>{
-    const b=document.querySelector('.cbtn');b.textContent='✅ Copied!';
+  navigator.clipboard.writeText($('script-txt').textContent).then(()=>{
+    const b=document.querySelector('.cbtn'); b.textContent='✅ Copied!';
     setTimeout(()=>b.innerHTML='📋 Copy script',2000);
   });
 }
 
-// ── Config copy
-function copyScript(){}  // will be overridden below
-// (redefined above, OK)
-
-// ── Restore URL
-try{const u=localStorage.getItem('sd_url');if(u)document.getElementById('inp-url').value=u;}catch{}
+// ── Restore saved URL
+try{const u=localStorage.getItem('sd_url');if(u)$('inp-url').value=u;}catch{}
 </script>
 </body>
 </html>
