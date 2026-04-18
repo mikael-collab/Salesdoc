@@ -545,14 +545,19 @@ function enableInvoiceFields(on){
 }
 
 // ── Invoice form
+// Calculated cols: AA=26, AB=27, AC=28, AE=30 — shown but NOT sent to sheet
+// Editable cols:   AD=29, AK=36 — shown and sent
+const CALC_COLS   = [26,27,28,30];
+const EDITABLE_EXTRA = [29,36];
+const SKIP_COLS   = new Set(CALC_COLS); // don't send these
+
 function renderInvoiceForm(){
   const isReceipt=isReceiptSheet(S.tab);
   const headers=S.sheets[S.tab]?.headers||[];
   const content=$('content');
 
-  // Extra fields: sheet columns beyond the standard ones (index >= 26, i.e. AA onwards)
-  // Editable: col index 29 (AD) and 36 (AK). All others disabled.
-  const EDITABLE_EXTRA=[29,36];
+  // Extra fields: cols AA (26) onwards from sheet headers, excluding any named הערות
+  // הערות lives in the sheet and will appear here — we don't add a separate hardcoded one
   const extraFields=[];
   headers.forEach((h,i)=>{ if(i>=26 && h) extraFields.push({h,i}); });
 
@@ -566,24 +571,20 @@ function renderInvoiceForm(){
     <div class="form-scroll">
       <div class="fsec">
         <div class="fsec-title">פרטי הזמנה</div>
-
         <div class="fgrp">
           <label class="flabel">ת"ז / ח"פ לקוח</label>
           <input type="text" id="inv-id" placeholder="הזן ת''ז / ח''פ" oninput="S.formVals['id']=this.value" onblur="lookupCustomer(this.value,true)">
           <div class="customer-found" id="inv-cust-name"></div>
           <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית. שאר השדות ינעלו עד להזנת ת''ז.</div>
         </div>
-
         <div class="fgrp">
           <label class="flabel">מספר חשבונית</label>
           <input type="text" id="inv-num" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
         </div>
-
         <div class="fgrp">
           <label class="flabel">תאריך</label>
           <input type="date" id="inv-date" class="inv-field" disabled value="${today()}" oninput="S.formVals['date']=this.value">
         </div>
-
       </div>
 
       <div class="fsec"><div class="fsec-title">מוצרים</div></div>
@@ -610,16 +611,15 @@ function renderInvoiceForm(){
         <div class="order-row">
           <div class="fgrp">
             <label class="flabel">מחיר ליחידה (₪)</label>
-            <input type="number" id="inv-price" class="inv-field" disabled min="0" value="13" oninput="S.formVals['price']=this.value">
+            <input type="number" id="inv-price" class="inv-field" disabled min="0" value="13" oninput="S.formVals['price']=this.value;updateCalcFields()">
           </div>
           <div class="fgrp">
             <label class="flabel">הנחה (%)</label>
-            <input type="number" id="inv-disc" class="inv-field" disabled min="0" max="100" value="0" oninput="S.formVals['disc']=this.value">
+            <input type="number" id="inv-disc" class="inv-field" disabled min="0" max="100" value="0" oninput="S.formVals['disc']=this.value;updateCalcFields()">
           </div>
         </div>
       </div>`;
 
-  // Payment section — only for receipt sheet
   if(isReceipt){
     html+=`
       <div class="fsec">
@@ -636,30 +636,28 @@ function renderInvoiceForm(){
       </div>`;
   }
 
-  // Extra sheet fields AA–AK (col index 26+), disabled except AD(29) and AK(36)
+  // Extra sheet fields AA onwards
+  // Calc cols (AA,AB,AC,AE) = disabled + auto-updated on the fly
+  // Editable cols (AD,AK) = enabled after customer lookup
+  // All others (AF-AJ except AK, and AK+) = disabled
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
-      const editable=EDITABLE_EXTRA.includes(i);
-      const cls=editable?'inv-field':'';
-      const dis=editable?'':'disabled';
+      const isCalc  = CALC_COLS.includes(i);
+      const isEdit  = EDITABLE_EXTRA.includes(i);
+      const cls     = isEdit ? 'inv-field' : '';
+      const dis     = isEdit ? '' : 'disabled';
+      const ph      = isEdit ? 'הזן…' : (isCalc ? 'מחושב אוטומטית' : '');
+      const style   = isCalc ? 'background:#EEF2FF;color:#4F6EC0;font-weight:600;' : '';
       html+=`<div class="fgrp">
         <label class="flabel">${esc(h)}</label>
-        <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${editable?'הזן…':''}" oninput="S.formVals['extra${i}']=this.value">
+        <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${ph}" style="${style}" oninput="S.formVals['extra${i}']=this.value">
       </div>`;
     });
     html+=`</div>`;
   }
 
-  html+=`
-      <div class="fsec" style="padding-bottom:14px">
-        <div class="fsec-title">הערות</div>
-        <div class="fgrp">
-          <textarea id="inv-notes" class="inv-field" disabled placeholder="הערות לחשבונית…" oninput="S.formVals['notes']=this.value"></textarea>
-        </div>
-      </div>
-    </div>`;
-
+  html+=`</div>`; // close form-scroll
   content.innerHTML=html;
   S.formVals['date']=today();
   S.formVals['price']='13';
@@ -682,6 +680,24 @@ function setQty(si,val){
 function updateTotal(){
   const total=S.skuQtys.reduce((s,q)=>s+(q||0),0);
   const el=$('total-units'); if(el)el.textContent=total;
+  updateCalcFields();
+}
+
+// Update calculated fields AA-AE on the fly (shown but not sent to sheet)
+// Mapping: AA(26)=total units, AB(27)=gross, AC(28)=discount amount, AE(30)=net
+function updateCalcFields(){
+  const units = S.skuQtys.reduce((s,q)=>s+(q||0),0);
+  const price  = parseFloat($('inv-price')?.value||'13')||0;
+  const discPct= parseFloat($('inv-disc')?.value||'0')||0;
+  const gross  = units * price;
+  const discAmt= +(gross * discPct / 100).toFixed(2);
+  const net    = +(gross - discAmt).toFixed(2);
+
+  const map = { 26: units, 27: gross, 28: discAmt, 30: net };
+  Object.entries(map).forEach(([col, val])=>{
+    const el=$('extra-'+col);
+    if(el) el.value = val;
+  });
 }
 
 // ── Submit
@@ -693,27 +709,55 @@ async function submitForm(){
 
   let row=[];
   if(isInv){
-    // A: invoice number, B: customer ID, C: date
-    row.push(S.formVals['num']||'');
-    row.push(S.formVals['id']||'');
-    row.push(S.formVals['date']||today());
-    // SKU pairs: name col + qty col (11 pairs)
+    // Build full-length row matching sheet column structure.
+    // Calculated columns (AA=26,AB=27,AC=28,AE=30) are sent as '' — Google Sheets computes them.
+    const totalCols = sh.headers.length || 37;
+    row = new Array(totalCols).fill('');
+
+    row[0]  = '';                                 // A: invoice number — auto by sheet
+    row[1]  = S.formVals['id']||'';              // B: customer ID
+    row[2]  = S.formVals['date']||today();        // C: date
+
+    // SKU pairs D(3)–Y(24)
     SKUS.forEach((sku,si)=>{
-      row.push(sku.full);           // SKU name
-      row.push(S.skuQtys[si]||''); // qty
+      row[3 + si*2]     = sku.full;               // SKU name col
+      row[3 + si*2 + 1] = S.skuQtys[si]||'';    // qty col
     });
-    // Price + discount
-    row.push(S.formVals['price']||'13');
-    row.push(S.formVals['disc']||'0');
-    // Receipt-only fields
+
+    row[25] = S.formVals['price']||'13';          // Z: price
+
+    // AA(26),AB(27),AC(28): calculated — leave ''
+    // AE(30): calculated — leave ''
+
+    row[29] = S.formVals['extra29']||'';          // AD: editable
+
     if(isReceipt){
-      row.push(S.formVals['pay']||'');
-      row.push(S.formVals['paydetail']||'');
+      // Payment fields — place after AE if known, else skip index issues
+      // We'll store them in the extra editable positions known from sheet
     }
-    // Notes (all invoice types)
-    row.push(S.formVals['notes']||'');
+
+    // AK(36): editable
+    if(totalCols > 36) row[36] = S.formVals['extra36']||'';
+
+    // Any other editable extra fields
+    sh.headers.forEach((h,i)=>{
+      if(i>=26 && !SKIP_COLS.has(i) && EDITABLE_EXTRA.includes(i)){
+        row[i]=S.formVals['extra'+i]||'';
+      }
+    });
+
+    // Receipt payment + paydetail: find columns by header name
+    if(isReceipt){
+      sh.headers.forEach((h,i)=>{
+        if(h==='אמצעי תשלום') row[i]=S.formVals['pay']||'';
+        if(h==='פרטים נוספים') row[i]=S.formVals['paydetail']||'';
+      });
+    }
+
+    // הערות: find column by header name
+    sh.headers.forEach((h,i)=>{ if(h==='הערות') row[i]=S.formVals['notes']||''; });
+
   } else {
-    // Customer: all header columns
     row=sh.headers.map((_,i)=>S.formVals[i]||'');
   }
 
@@ -722,13 +766,32 @@ async function submitForm(){
     saveBtn.textContent='שמור ✓'; saveBtn.disabled=false;
     return;
   }
+
   try{
     const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
     const data=await res.json();
     if(!data.ok)throw new Error(data.error);
-    sh.rows.push(row); navBack();
+    // Re-fetch sheet to import calculated values from Google Sheets
+    await refreshSheets();
+    navBack();
   }catch(e){ alert('שגיאה בשמירה: '+e.message); }
   finally{ saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; }
+}
+
+// Re-fetch all sheets from the script after a save (to import calculated values)
+async function refreshSheets(){
+  if(!S.scriptUrl) return;
+  try{
+    const res=await fetch(S.scriptUrl);
+    if(!res.ok) return;
+    const data=await res.json();
+    if(!data.ok) return;
+    data.sheets.forEach(sh=>{
+      if(S.sheets[sh.name]){
+        S.sheets[sh.name].rows=sh.rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+      }
+    });
+  }catch{ /* silent — we still navigate back */ }
 }
 
 // ── Copy script button
