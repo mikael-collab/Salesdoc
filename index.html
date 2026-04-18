@@ -894,15 +894,24 @@ async function submitForm(){
   if(S.isDemo){ sh.rows.push(row); navBack(); saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; return; }
 
   try{
-    // Fix 3: write to first empty row by key column, not just append
-    // חשבוניות → key col = 1 (ת"ז/ח"פ); קבלה → key col = 0 (מספר חשבונית)
+    // Try fillFirstEmpty (requires updated Apps Script)
     const keyCol = isReceipt ? 0 : 1;
-    const res=await fetch(S.scriptUrl,{
+    let res = await fetch(S.scriptUrl,{
       method:'POST',
       body:JSON.stringify({action:'fillFirstEmpty', sheet:S.tab, keyCol, row})
     });
-    const data=await res.json();
-    if(!data.ok)throw new Error(data.error);
+    let data = await res.json();
+
+    // If server returned an error (old script deployed), fall back to plain append
+    if(!data.ok && data.error && data.error.includes('a1Notation')){
+      res  = await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
+      data = await res.json();
+      if(!data.ok) throw new Error(data.error);
+      console.warn('Fell back to append — please redeploy Apps Script for fillFirstEmpty support');
+    } else if(!data.ok){
+      throw new Error(data.error);
+    }
+
     await refreshSheets();
     navBack();
   }catch(e){ alert('שגיאה בשמירה: '+e.message); }
