@@ -904,26 +904,30 @@ async function submitForm(){
 
     try{
       // Find target row from cached sheet data (first row where key column is empty)
-      // For חשבוניות → key col = ת"ז column; for קבלה → key col = first column (מספר)
       const keyHeader = isReceipt ? ['מספר','קבלה'] : ['ת"ז','ח"פ'];
       const keyColIdx = headers.findIndex(h=>keyHeader.some(p=>h.includes(p)));
       let targetSheetRow = null;
       for(let r=0;r<sh.rows.length;r++){
         const v=sh.rows[r][keyColIdx>=0?keyColIdx:1];
-        if(v===''||v===null||v===undefined){targetSheetRow=r+2;break;} // +1 header +1 for 1-index
+        if(v===''||v===null||v===undefined){targetSheetRow=r+2;break;}
       }
 
       const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
 
       if(targetSheetRow){
-        // Write only the cells that have values — preserves all formulas in other cells
-        await Promise.all(nonEmpty.map(([ci,v])=>
-          fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({
-            sheet:S.tab,
-            cell:colLetter(parseInt(ci))+targetSheetRow,
-            value:v
-          })})
-        ));
+        // Write cells ONE AT A TIME sequentially — Apps Script can't handle parallel POSTs
+        for(const [ci,v] of nonEmpty){
+          const cell=colLetter(parseInt(ci))+targetSheetRow;
+          const res=await fetch(S.scriptUrl,{
+            method:'POST',
+            body:JSON.stringify({sheet:S.tab, cell, value:v})
+          });
+          // Parse response but don't abort on individual cell errors — keep writing the rest
+          try{
+            const d=await res.json();
+            if(!d.ok) console.warn('Cell write warning:',cell,d.error);
+          }catch{}
+        }
       } else {
         // No empty row found — append a new row with correct column mapping
         const row=new Array(Math.max(headers.length,37)).fill('');
