@@ -277,20 +277,20 @@ function doPost(e) {
    SalesDocs — v3  (all 6 improvements)
    ═══════════════════════════════════════════════════════════ */
 
-// SKU definitions — short label, full English name, Hebrew name
-// SKU name columns are NOT sent to sheet — only qty columns are written
+// SKU definitions — short label, full English name, Hebrew name, color
+// Colors match the original Google Sheet column colors
 const SKUS = [
-  { short:'Blueb 10',  full:'Blueberry Mint 10',  heb:'אוכמניות'     },
-  { short:'Blueb 6',   full:'Blueberry Mint 6',   heb:'אוכמניות'     },
-  { short:'Lime 14',   full:'Jalapeno Lime 14',   heb:'חלפיניו ליים' },
-  { short:'Lime 6',    full:'Jalapeno Lime 6',    heb:'חלפיניו ליים' },
-  { short:'Peppe 20',  full:'Peppermint 20',      heb:'מנטה'         },
-  { short:'Peppe 10',  full:'Peppermint 10',      heb:'מנטה'         },
-  { short:'Peppe 3',   full:'Peppermint 3',       heb:'מנטה'         },
-  { short:'Raspb 10',  full:'Raspberry Soda 10',  heb:'פטל'          },
-  { short:'Water 20',  full:'Watermelon 20',      heb:'אבטיח'        },
-  { short:'Water 14',  full:'Watermelon 14',      heb:'אבטיח'        },
-  { short:'Banan 3',   full:'Banana 3',           heb:'בננה'         },
+  { short:'Blueb 10',  full:'Blueberry Mint 10',  heb:'אוכמניות',     color:'#BBDEFB', text:'#1565C0' },
+  { short:'Blueb 6',   full:'Blueberry Mint 6',   heb:'אוכמניות',     color:'#90CAF9', text:'#0D47A1' },
+  { short:'Lime 14',   full:'Jalapeno Lime 14',   heb:'חלפיניו ליים', color:'#C8E6C9', text:'#2E7D32' },
+  { short:'Lime 6',    full:'Jalapeno Lime 6',    heb:'חלפיניו ליים', color:'#A5D6A7', text:'#1B5E20' },
+  { short:'Peppe 20',  full:'Peppermint 20',      heb:'מנטה',         color:'#E1BEE7', text:'#6A1B9A' },
+  { short:'Peppe 10',  full:'Peppermint 10',      heb:'מנטה',         color:'#CE93D8', text:'#4A148C' },
+  { short:'Peppe 3',   full:'Peppermint 3',       heb:'מנטה',         color:'#BA68C8', text:'#3E1157' },
+  { short:'Raspb 10',  full:'Raspberry Soda 10',  heb:'פטל',          color:'#FFCDD2', text:'#B71C1C' },
+  { short:'Water 20',  full:'Watermelon 20',      heb:'אבטיח',        color:'#FFE0B2', text:'#E65100' },
+  { short:'Water 14',  full:'Watermelon 14',      heb:'אבטיח',        color:'#FFCC80', text:'#BF360C' },
+  { short:'Banan 3',   full:'Banana 3',           heb:'בננה',         color:'#FFF9C4', text:'#F57F17' },
 ];
 const SKU_QTY_COLS = [4,6,8,10,12,14,16,18,20,22,24]; // 0-based cols for quantities
 
@@ -626,16 +626,17 @@ function renderInvoiceForm(){
       <div class="sku-list">`;
 
   SKUS.forEach((sku,si)=>{
-    html+=`<div class="sku-row">
+    html+=`<div class="sku-row" style="background:${sku.color}20;border-left:3px solid ${sku.color};">
       <div class="sku-name-wrap">
-        <div class="sku-short">${esc(sku.short)} <span style="color:var(--amber);font-weight:400;font-size:12px">| ${esc(sku.heb)}</span></div>
-        <div class="sku-full">${esc(sku.full)}</div>
+        <div class="sku-short" style="color:${sku.text}">${esc(sku.short)} <span style="color:${sku.text};opacity:.7;font-weight:400;font-size:12px">| ${esc(sku.heb)}</span></div>
+        <div class="sku-full" style="color:${sku.text};opacity:.6">${esc(sku.full)}</div>
       </div>
       <div class="stepper">
-        <button class="st-btn inv-field" disabled onclick="adjQty(${si},-1)">−</button>
+        <button class="st-btn inv-field" disabled onclick="adjQty(${si},-1)" style="border-color:${sku.color};color:${sku.text}">−</button>
         <input class="st-inp inv-field" disabled id="qty-${si}" type="number" min="0" value="0"
-          oninput="setQty(${si},this.value)" onblur="setQty(${si},this.value)">
-        <button class="st-btn plus inv-field" disabled onclick="adjQty(${si},1)">+</button>
+          oninput="setQty(${si},this.value)" onblur="setQty(${si},this.value)"
+          style="border-color:${sku.color};">
+        <button class="st-btn plus inv-field" disabled onclick="adjQty(${si},1)" style="border-color:${sku.color};background:${sku.color};color:${sku.text}">+</button>
       </div>
     </div>`;
   });
@@ -973,19 +974,22 @@ function colLetter(n){
   return s;
 }
 
-// XHR-based POST — handles Apps Script redirects more reliably than fetch()
+// POST to Apps Script — must NOT set Content-Type header to avoid CORS preflight
+// Apps Script's /exec handles simple POST requests without preflight
 function xhrPost(url, payload){
-  return new Promise((resolve, reject)=>{
-    const xhr=new XMLHttpRequest();
-    xhr.open('POST', url, true);
-    xhr.onload=()=>{
-      try{ resolve(JSON.parse(xhr.responseText)); }
-      catch{ reject(new Error('Bad response ('+xhr.status+'): '+xhr.responseText.slice(0,80))); }
-    };
-    xhr.onerror=()=>reject(new Error('Network error — check your internet connection and that the script URL is correct'));
-    xhr.ontimeout=()=>reject(new Error('Request timed out'));
-    xhr.timeout=30000; // 30s timeout
-    xhr.send(JSON.stringify(payload));
+  return fetch(url, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+    // No Content-Type header — keeps it a "simple request", no CORS preflight needed
+  })
+  .then(res => res.text())
+  .then(text => {
+    try { return JSON.parse(text); }
+    catch { throw new Error('Bad response: ' + text.slice(0,100)); }
+  })
+  .catch(err => {
+    if(err.message.startsWith('Bad response')) throw err;
+    throw new Error('Network error — check internet connection and script URL');
   });
 }
 
