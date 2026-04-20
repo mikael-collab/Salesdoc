@@ -223,7 +223,26 @@ function handleWrite(ss, p) {
   try {
     var sh = ss.getSheetByName(p.sheet);
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
-    if (p.action === 'writeAfterLastFilled') {
+    if (p.action === 'insertImage') {
+      // Insert actual image into cell — finds row by key column value
+      var data    = sh.getDataRange().getValues();
+      var keyCol  = typeof p.keyCol === 'number' ? p.keyCol : 0;
+      var targetRow = -1;
+      for (var r = 1; r < data.length; r++) {
+        if (String(data[r][keyCol]).trim() === String(p.keyVal).trim()) {
+          targetRow = r + 1; break;
+        }
+      }
+      if (targetRow === -1) throw new Error('Row not found for key: ' + p.keyVal);
+      // Strip data URL prefix (data:image/jpeg;base64,...)
+      var base64 = p.imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      var blob   = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', 'check.jpg');
+      var image  = SpreadsheetApp.newCellImage().setSourceUrl(
+        'data:image/jpeg;base64,' + base64
+      ).setAltTextDescription('צילום שיק').build();
+      sh.getRange(targetRow, p.col + 1).setValue(image);
+
+    } else if (p.action === 'writeAfterLastFilled') {
       // Find last row where keyCol has a value, write to the next empty row after it
       var data = sh.getDataRange().getValues();
       var lastFilled = 1; // default: row 2 (after header)
@@ -1132,28 +1151,20 @@ async function submitForm(){
       if(!value&&value!==0)return;
       headers.forEach((h,i)=>{if(patterns.some(p=>h.includes(p)))vals[i]=value;});
     };
-    put(['ת"ז','ח"פ'],                              S.formVals['id']);
-    put(['שם לקוח','שם הלקוח','שם העסק','עסק'],   S.formVals['custName']||'');
+    // ת"ז and שם לקוח are calculated by sheet formulas — do NOT send
     put(['מספר חשבונית','חשבונית'],                S.formVals['invRef']);
     put(['סכום'],                                   S.formVals['amount']);
     put(['תאריך'],                                  fmtDate(S.formVals['date']));
     put(['אמצעי תשלום','סוג תשלום','סוג'],         S.formVals['pay']||'');
     put(['מספר שיק'],                               S.formVals['checkNum']||'');
     put(['תאריך פרעון','תאריך תשלום'],             fmtDate(S.formVals['checkDate']||''));
-    // Send 'צולם ✓' if photo taken — Google Sheets can't store images via API
-    const photoVal = S.formVals['checkPhoto'] ? 'צולם ✓' : '';
-    put(['צילום שיק','תמונת שיק','צ׳ק תמונה'],    photoVal);
-    // Also save base64 in localStorage keyed by invoice ref for later reference
-    if(S.formVals['checkPhoto']){
-      try{ localStorage.setItem('check_'+S.formVals['invRef'], S.formVals['checkPhoto']); }catch{}
-    }
     put(['הערות'],                                  S.formVals['notes']||'');
+
     const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
     const row=new Array(Math.max(headers.length,10)).fill('');
     nonEmpty.forEach(([ci,v])=>{row[parseInt(ci)]=v;});
     if(S.isDemo){sh.rows.push(row);navBack();saveBtn.textContent='שמור ✓';saveBtn.disabled=false;return;}
     try{
-      // Find the מספר חשבונית column in the קבלה sheet to locate last filled row
       const invNumCol=headers.findIndex(h=>/מספר/.test(h)&&!/שיק/.test(h));
       const cells=nonEmpty.map(([ci,v])=>({col:parseInt(ci),val:v}));
 
@@ -1163,11 +1174,26 @@ async function submitForm(){
         keyCol:invNumCol>=0?invNumCol:0,
         cells
       });
-      // Fallback to append if old script
       if(!data.ok){
         const data2=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
         if(!data2.ok)throw new Error(data2.error);
       }
+
+      // Send check photo as actual image to sheet if taken
+      if(S.formVals['checkPhoto']){
+        const photoCol=headers.findIndex(h=>/צילום שיק|תמונת שיק/.test(h));
+        if(photoCol>=0){
+          await xhrPost(S.scriptUrl,{
+            action:'insertImage',
+            sheet:S.tab,
+            keyCol:invNumCol>=0?invNumCol:0,
+            keyVal:S.formVals['invRef'],
+            col:photoCol,
+            imageBase64:S.formVals['checkPhoto']
+          });
+        }
+      }
+
       await refreshSheets(); navBack();
     }catch(e){alert('שגיאה בשמירה: '+e.message);}
     finally{saveBtn.textContent='שמור ✓';saveBtn.disabled=false;}
@@ -1389,4 +1415,3 @@ try{const u=localStorage.getItem('sd_url');if(u)$('inp-url').value=u;}catch{}
 </script>
 </body>
 </html>
-  
