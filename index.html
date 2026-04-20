@@ -243,20 +243,22 @@ function handleWrite(ss, p) {
       sh.getRange(targetRow, p.col + 1).setValue(image);
 
     } else if (p.action === 'writeAfterLastFilled') {
-      // Find last row where keyCol has a value, write to the next empty row after it
       var data = sh.getDataRange().getValues();
-      var lastFilled = 1; // default: row 2 (after header)
+      var lastFilled = 1;
       for (var r = 1; r < data.length; r++) {
         var cell = data[r][p.keyCol];
-        if (cell !== '' && cell !== null && cell !== undefined) {
-          lastFilled = r + 1; // 1-indexed
-        }
+        if (cell !== '' && cell !== null && cell !== undefined) lastFilled = r + 1;
       }
       var targetRow = lastFilled + 1;
       p.cells.forEach(function(c) {
-        sh.getRange(targetRow, c.col + 1).setValue(c.val);
+        var rng = sh.getRange(targetRow, c.col + 1);
+        if (shouldBeText(c.val)) {
+          rng.setNumberFormat('@');
+          rng.setValue(String(c.val)); // explicit string prevents numeric coercion
+        } else {
+          rng.setValue(c.val);
+        }
       });
-
     } else if (p.action === 'writeSparseRow') {
       var data = sh.getDataRange().getValues();
       var keyCol = typeof p.keyCol === 'number' ? p.keyCol : 1;
@@ -266,15 +268,30 @@ function handleWrite(ss, p) {
         if (cell === '' || cell === null || cell === undefined) { targetRow = r + 1; break; }
       }
       if (targetRow === -1) targetRow = data.length + 1;
-      p.cells.forEach(function(c) { sh.getRange(targetRow, c.col + 1).setValue(c.val); });
+      p.cells.forEach(function(c) {
+        var rng = sh.getRange(targetRow, c.col + 1);
+        if (shouldBeText(c.val)) {
+          rng.setNumberFormat('@');
+          rng.setValue(String(c.val)); // explicit string prevents numeric coercion
+        } else {
+          rng.setValue(c.val);
+        }
+      });
     } else if (p.cell) {
-      // Single cell write
       sh.getRange(p.cell).setValue(p.value);
     }
     return jsonResponse({ ok: true });
   } catch(err) {
     return jsonResponse({ ok: false, error: err.message });
   }
+}
+
+// Returns true if value should be forced to text format
+// (IDs, phone numbers — numeric strings that must stay as text for XLOOKUP to match)
+function shouldBeText(val) {
+  if (typeof val !== 'string') return false;
+  var s = String(val).trim();
+  return /^\d{6,12}$/.test(s);
 }
 
 function jsonResponse(obj) {
@@ -1238,7 +1255,9 @@ async function submitForm(){
     const put  = (col, value) => { if(col>=0 && value!==''&&value!==null&&value!==undefined) vals[col]=value; };
 
     // Customer fields — found by header name
-    put(findCol(['ת"ז','ח"פ','ת.ז','ח.פ']),           S.formVals['id']||'');
+    // ת"ז must be sent as string to preserve leading zeros for XLOOKUP matching
+    const idRaw = String(S.formVals['id']||'').trim();
+    put(findCol(['ת"ז','ח"פ','ת.ז','ח.פ']),           idRaw);
     put(findCol(['שם לקוח','שם הלקוח']),                S.formVals['custName']||'');
     put(findCol(['תאריך']),                              fmtDate(S.formVals['date']));
     put(findCol(['מחיר']),                              parseFloat(S.formVals['price']||'13').toFixed(2));
