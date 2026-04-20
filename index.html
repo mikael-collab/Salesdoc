@@ -253,8 +253,7 @@ function handleWrite(ss, p) {
       p.cells.forEach(function(c) {
         var rng = sh.getRange(targetRow, c.col + 1);
         if (shouldBeText(c.val)) {
-          rng.setNumberFormat('@');
-          rng.setValue(String(c.val)); // explicit string prevents numeric coercion
+          writeTextCell(rng, c.val);
         } else {
           rng.setValue(c.val);
         }
@@ -271,8 +270,7 @@ function handleWrite(ss, p) {
       p.cells.forEach(function(c) {
         var rng = sh.getRange(targetRow, c.col + 1);
         if (shouldBeText(c.val)) {
-          rng.setNumberFormat('@');
-          rng.setValue(String(c.val)); // explicit string prevents numeric coercion
+          writeTextCell(rng, c.val);
         } else {
           rng.setValue(c.val);
         }
@@ -289,9 +287,17 @@ function handleWrite(ss, p) {
 // Returns true if value should be forced to text format
 // (IDs, phone numbers — numeric strings that must stay as text for XLOOKUP to match)
 function shouldBeText(val) {
-  if (typeof val !== 'string') return false;
+  if (typeof val === 'undefined' || val === null) return false;
   var s = String(val).trim();
-  return /^\d{6,12}$/.test(s);
+  return /^\d{5,15}$/.test(s); // 5-15 digit strings = IDs, phone numbers
+}
+
+function writeTextCell(rng, val) {
+  // Force text by writing as a formula: ="014064930"
+  // This is the only 100% reliable way to store a numeric-looking string as text in Sheets
+  var s = String(val).trim();
+  rng.setNumberFormat('@');
+  rng.setFormula('="' + s.replace(/"/g, '""') + '"');
 }
 
 function jsonResponse(obj) {
