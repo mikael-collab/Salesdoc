@@ -450,13 +450,12 @@ function renderListItems(){
   const sh=S.sheets[S.tab]; const q=S.search.toLowerCase();
   let rows=sh?.rows||[];
 
-  // For קבלה — only show rows where מספר חשבונית (col A) is filled
-  if(isReceiptSheet(S.tab)){
+  // Filter empty rows for both invoice and receipt sheets (key = col A = מספר חשבונית)
+  if(isInvSheet(S.tab)||isReceiptSheet(S.tab)){
     rows=rows.filter(r=>r[0]!==''&&r[0]!==null&&r[0]!==undefined);
   }
 
   const filtered=rows.filter(r=>!q||r.some(c=>String(c).toLowerCase().includes(q)));
-
   $('list-meta').textContent=filtered.length+' מתוך '+rows.length+' רשומות';
 
   let html='';
@@ -464,11 +463,22 @@ function renderListItems(){
     html=`<div class="empty"><div class="empty-icon">🔎</div><div>לא נמצאו רשומות</div></div>`;
   } else {
     const headers=sh?.headers||[];
-    // Find key column indices for invoice sheets
     const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
-    const colA=0; // invoice number
-    const dateCol=headers.findIndex(h=>/תאריך/.test(h)&&!/פרעון|תשלום/.test(h));
-    const vatCol29=29, vatCol30=30; // VAT total column (AD or AE)
+
+    // Pre-build customer lookup map from לקוחות sheet (ת"ז → {name, business})
+    const custMap={};
+    const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
+    if(custSh) custSh.rows.forEach(r=>{ const id=String(r[1]||'').trim(); if(id) custMap[id]={name:String(r[0]||''),biz:String(r[2]||'')}; });
+
+    // Find column indices by header name
+    const idCol   =headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const dateCol  =headers.findIndex(h=>/תאריך/.test(h)&&!/פרעון|תשלום/.test(h));
+    const vatColIdx=headers.findIndex(h=>/סה.כ.*מע.מ|כולל מע.מ/.test(h));
+    // Fallback VAT col positions (AD=29 or AE=30)
+    const getVat=(row)=>{
+      if(vatColIdx>=0 && row[vatColIdx]) return row[vatColIdx];
+      return row[30]||row[29]||'';
+    };
 
     filtered.forEach(row=>{
       const ri=rows.indexOf(row);
@@ -477,40 +487,44 @@ function renderListItems(){
       const isWhite=bgColor==='#ffffff'||bgColor==='#fff'||bgColor==null;
       const rowStyle=isWhite?'':'background:'+bgColor+';';
       const textDark=isWhite||isLightColor(bgColor);
-      const tc=textDark?'':'color:#fff;';
-      const tc2=textDark?'':'color:rgba(255,255,255,.8);';
+      const tc =textDark?'':'color:#fff;';
+      const tc2=textDark?'':'color:rgba(255,255,255,.85);';
       const tc3=textDark?'':'color:rgba(255,255,255,.7);';
 
-      let r1, r2, r3, copyValue, copyLabel;
+      let r1,r2,r3,copyValue;
       if(isInv){
-        // Invoice/receipt: show invoice#, VAT total, formatted date
-        const invNum  = String(row[colA]||'');
-        const rawDate = dateCol>=0 ? row[dateCol] : '';
-        const dateStr = formatDateDisplay(rawDate);
-        const vatTotal= row[vatCol30]||row[vatCol29]||'';
-        r1 = invNum ? `מס' ${esc(invNum)}` : '—';
-        r2 = vatTotal ? `סה"כ: ₪${esc(String(Math.round(vatTotal)))}` : '';
-        r3 = dateStr;
-        copyValue = invNum;
-        copyLabel = '📋';
+        const invNum = String(row[0]||'');
+        const idVal  = idCol>=0 ? String(row[idCol]||'') : String(row[1]||'');
+        const cust   = custMap[idVal]||{};
+        const biz    = cust.biz||'';
+        const vatRaw = getVat(row);
+        const vatStr = vatRaw ? '₪'+Math.round(Number(vatRaw)) : '';
+        const dateStr= formatDateDisplay(dateCol>=0?row[dateCol]:'');
+
+        // Line 1: ת"ז | שם העסק | מס' חשבונית
+        const parts1=[idVal,biz,invNum?'מס\' '+invNum:''].filter(Boolean);
+        r1=parts1.join(' · ');
+        // Line 2: date | VAT total
+        const parts2=[dateStr,vatStr].filter(Boolean);
+        r2=parts2.join('   ');
+        r3='';
+        copyValue=invNum; // copy invoice number
       } else {
-        // Customers: show name, ID, business
-        r1 = esc(row[0]||'');
-        r2 = row[1] ? esc(String(row[1])) : '';
-        r3 = row[2] ? esc(String(row[2])) : '';
-        copyValue = String(row[1]||'');
-        copyLabel = '📋';
+        r1=esc(String(row[0]||''));
+        r2=row[1]?esc(String(row[1])):'';
+        r3=row[2]?esc(String(row[2])):'';
+        copyValue=String(row[1]||''); // copy ת"ז for customers
       }
 
       html+=`<div class="list-item" style="${rowStyle}">
         <div class="li-main">
           <div class="li-info">
-            <div class="li-r1" style="${tc}font-weight:700">${r1}</div>
-            ${r2?`<div class="li-r2" style="${tc2}">${r2}</div>`:''}
-            ${r3?`<div class="li-r3" style="${tc3}">${r3}</div>`:''}
+            <div class="li-r1" style="${tc}font-weight:600;white-space:normal;line-height:1.4">${r1}</div>
+            ${r2?`<div class="li-r2" style="${tc2}font-weight:600">${esc(r2)}</div>`:''}
+            ${r3?`<div class="li-r3" style="${tc3}">${esc(r3)}</div>`:''}
           </div>
           <div class="li-btns">
-            <div class="icon-btn" id="cp-${ri}" title="העתק" onclick="copyVal(${ri},'${esc(copyValue)}')">${copyLabel}</div>
+            <div class="icon-btn" id="cp-${ri}" title="העתק" onclick="copyVal(${ri},'${esc(copyValue)}')">📋</div>
             <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
           </div>
         </div>`;
