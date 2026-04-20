@@ -181,24 +181,30 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
     <div class="card">
       <details>
         <summary>⚙️ הגדרת מנהל — לחץ להרחבה</summary>
-        <div style="margin-top:14px">
-          <p style="font-size:13px;color:var(--gray);margin:0 0 12px;line-height:1.6">פעם אחת לכל גיליון. כ-5 דקות. לא נדרש Google Cloud.</p>
-          <div class="setup-step"><div class="snum">1</div><div>פתח את גיליון Google של איש המכירות ← <strong>Extensions → Apps Script</strong></div></div>
-          <div class="setup-step"><div class="snum">2</div><div>מחק כל קוד קיים. הדבק את הסקריפט למטה ולחץ <strong>Save 💾</strong></div></div>
-          <div class="setup-step"><div class="snum">3</div><div><strong>Deploy → New deployment</strong><br>• Type: <strong>Web app</strong><br>• Execute as: <strong>Me</strong><br>• Who has access: <strong>Anyone</strong><br>לחץ <strong>Deploy</strong></div></div>
-          <div class="setup-step"><div class="snum">4</div><div>Google מבקש הרשאה — לחץ <strong>Review permissions → Allow</strong></div></div>
-          <div class="setup-step"><div class="snum">5</div><div>העתק את ה-<strong>Web app URL</strong> ושלח לאיש המכירות.</div></div>
+          <div class="setup-inner">
+          <p style="font-size:13px;color:var(--gray);margin:0 0 12px;line-height:1.6">פעם אחת לכל גיליון. כ-5 דקות.</p>
+          <div class="setup-step"><div class="snum">1</div><div>מצא את ה-<strong>Sheet ID</strong> מה-URL של הגיליון:<br><code>docs.google.com/spreadsheets/d/<strong>SHEET_ID</strong>/edit</code></div></div>
+          <div class="setup-step"><div class="snum">2</div><div>עבור ל-<a href="https://script.google.com" target="_blank" style="color:var(--amber)">script.google.com</a> ← לחץ <strong>New project</strong></div></div>
+          <div class="setup-step"><div class="snum">3</div><div>מחק כל קוד קיים. הדבק את הסקריפט למטה. <strong>החלף את PASTE_SHEET_ID_HERE</strong> ב-Sheet ID שלך. לחץ <strong>Save 💾</strong></div></div>
+          <div class="setup-step"><div class="snum">4</div><div><strong>Deploy → New deployment</strong><br>• Type: <strong>Web app</strong><br>• Execute as: <strong>Me</strong><br>• Who has access: <strong>Anyone</strong><br>לחץ <strong>Deploy</strong></div></div>
+          <div class="setup-step"><div class="snum">5</div><div>Google מבקש הרשאה — לחץ <strong>Review permissions → Allow</strong></div></div>
+          <div class="setup-step"><div class="snum">6</div><div>העתק את ה-<strong>Web app URL</strong> ושלח לאיש המכירות.</div></div>
           <div class="code-box">
             <button class="cbtn" onclick="copyScript()">📋 Copy script</button>
-            <pre id="script-txt">function doGet(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+            <pre id="script-txt">// ⚠️ Replace PASTE_SHEET_ID_HERE with your actual Google Sheet ID
+// Sheet ID is the long code in the URL:
+// docs.google.com/spreadsheets/d/SHEET_ID/edit
+var SHEET_ID = 'PASTE_SHEET_ID_HERE';
 
-  // If a 'data' parameter is present, this is a write operation
+function doGet(e) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // Write operation via ?data= parameter
   if (e && e.parameter && e.parameter.data) {
     return handleWrite(ss, JSON.parse(e.parameter.data));
   }
 
-  // Otherwise return all sheet data (normal load)
+  // Read operation — return all sheet data
   var result = ss.getSheets().map(function(sh) {
     return { name: sh.getName(), rows: sh.getDataRange().getValues() };
   });
@@ -207,8 +213,8 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 
 function doPost(e) {
   try {
-    var p = JSON.parse(e.postData.contents);
-    return handleWrite(SpreadsheetApp.getActiveSpreadsheet(), p);
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    return handleWrite(ss, JSON.parse(e.postData.contents));
   } catch(err) {
     return jsonResponse({ ok: false, error: err.message });
   }
@@ -220,8 +226,8 @@ function handleWrite(ss, p) {
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
 
     if (p.action === 'writeSparseRow') {
-      var data    = sh.getDataRange().getValues();
-      var keyCol  = typeof p.keyCol === 'number' ? p.keyCol : 1;
+      var data = sh.getDataRange().getValues();
+      var keyCol = typeof p.keyCol === 'number' ? p.keyCol : 1;
       var targetRow = -1;
       for (var r = 1; r < data.length; r++) {
         var cell = data[r][keyCol];
@@ -254,7 +260,7 @@ function jsonResponse(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
           </div>
-          <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ תמיד פרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת).</p>
+          <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ תמיד פרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת). לכל גיליון — פרויקט Apps Script נפרד עם ה-Sheet ID שלו.</p>
         </div>
       </details>
     </div>
