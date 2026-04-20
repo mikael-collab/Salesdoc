@@ -328,8 +328,8 @@ let S = {
 const $  = id => document.getElementById(id);
 const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function isInvSheet(name){ return name.includes('חשבוני') && !name.includes('לקוח'); }
-function isReceiptSheet(name){ return name.includes('קבל') || (name.includes('חשבוני') && name.includes('קבל')); }
+function isReceiptSheet(name){ return name.includes('קבל'); }
+function isInvSheet(name){ return name.includes('חשבוני') && !name.includes('לקוח') && !isReceiptSheet(name); }
 function sheetIcon(name){ if(name.includes('לקוח'))return'👥'; if(name.includes('קבל'))return'🧾'; return'📋'; }
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $('s-'+id).classList.add('active'); }
@@ -452,7 +452,13 @@ function renderList(){
 
 function renderListItems(){
   const sh=S.sheets[S.tab]; const q=S.search.toLowerCase();
-  const rows=sh?.rows||[];
+  let rows=sh?.rows||[];
+
+  // For קבלה — only show rows where מספר חשבונית (col A) is filled
+  if(isReceiptSheet(S.tab)){
+    rows=rows.filter(r=>r[0]!==''&&r[0]!==null&&r[0]!==undefined);
+  }
+
   const filtered=rows.filter(r=>!q||r.some(c=>String(c).toLowerCase().includes(q)));
 
   $('list-meta').textContent=filtered.length+' מתוך '+rows.length+' רשומות';
@@ -766,7 +772,7 @@ function renderInvoiceForm(){
     'מספר שיק',"מספר צ'ק",'תאריך תשלום','תאריך פרעון שיק',
     'תאריך פרעון','צילום שיק',"צ'ק",
     'אמצעי תשלום',
-    ...(!isReceipt ? ['סכום התשלום'] : []),
+    ...(!isReceipt ? ['סכום התשלום','סוג התשלום','תאריך התשלום'] : []),
   ]);
   const editByName = isReceipt ? ['סכום התשלום','הערות'] : ['הערות'];
   const mandByName = isReceipt ? ['סכום התשלום'] : [];
