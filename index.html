@@ -336,9 +336,7 @@ async function connectScript(){
   const btn=$('btn-connect'); btn.disabled=true; btn.textContent='מתחבר…';
   showScreen('loading');
   try{
-    const res=await fetch(url);
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const data=await res.json();
+    const data = await xhrGet(url);
     if(!data.ok)throw new Error(data.error||'Script error');
     try{localStorage.setItem('sd_url',url);}catch{}
     launch(url,data.sheets,false);
@@ -987,47 +985,34 @@ function colLetter(n){
   return s;
 }
 
-// Send data to Apps Script via GET request with encoded payload
-// GET requests never have CORS/redirect issues unlike POST
-function scriptRequest(url, payload){
-  return new Promise((resolve, reject)=>{
-    const encoded = encodeURIComponent(JSON.stringify(payload));
-    const sep     = url.includes('?') ? '&' : '?';
-    const fullUrl = url + sep + 'data=' + encoded;
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', fullUrl, true);
-    xhr.timeout = 30000;
-    xhr.onload = ()=>{
-      try{ resolve(JSON.parse(xhr.responseText)); }
-      catch{ reject(new Error('Bad response: ' + xhr.responseText.slice(0,100))); }
+// XHR GET — for loading data and write operations via ?data= param
+function xhrGet(url){
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('GET',url,true);
+    xhr.timeout=30000;
+    xhr.onload=()=>{
+      try{resolve(JSON.parse(xhr.responseText));}
+      catch{reject(new Error('Bad JSON: '+xhr.responseText.slice(0,80)));}
     };
-    xhr.onerror   = ()=>reject(new Error('Network error — check internet connection'));
-    xhr.ontimeout = ()=>reject(new Error('Timed out'));
+    xhr.onerror  =()=>reject(new Error('Network error — check internet and script URL'));
+    xhr.ontimeout=()=>reject(new Error('Timeout after 30s'));
     xhr.send();
   });
 }
-// Keep xhrPost as alias so existing calls work
-const xhrPost = scriptRequest;
 
-// Re-fetch all sheets from the script after a save (to import calculated values)
+// Encode payload as GET param — avoids all CORS/POST preflight issues with Apps Script
+function xhrPost(url,payload){
+  const encoded=encodeURIComponent(JSON.stringify(payload));
+  return xhrGet(url+'?data='+encoded);
+}
+
 async function refreshSheets(){
   if(!S.scriptUrl) return;
   try{
-    const data = await new Promise((resolve,reject)=>{
-      const xhr=new XMLHttpRequest();
-      xhr.open('GET', S.scriptUrl);
-      xhr.timeout=20000;
-      xhr.onreadystatechange=function(){
-        if(xhr.readyState!==4) return;
-        try{ resolve(JSON.parse(xhr.responseText)); }
-        catch{ reject(new Error('parse error')); }
-      };
-      xhr.ontimeout=()=>reject(new Error('timeout'));
-      xhr.onerror=()=>reject(new Error('network'));
-      xhr.send();
-    });
+    const data=await xhrGet(S.scriptUrl);
     if(data.ok) _applyRefresh(data.sheets);
-  }catch{ /* silent */ }
+  }catch{ /* silent — best effort */ }
 }
 function _applyRefresh(sheets){
   if(!sheets) return;
