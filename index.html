@@ -618,8 +618,13 @@ const EDITABLE_EXTRA = [36];             // editable after customer lookup
 const SKIP_COLS      = new Set(CALC_COLS);
 const VAT            = 0.18;
 // Fields that are editable regardless of column index (matched by header name)
-const EDITABLE_BY_NAME  = ['סכום התשלום','הערות']; // these fields are enabled by name
-const MANDATORY_BY_NAME = ['סכום התשלום'];          // only these get the red * marker
+// סכום התשלום only applies to receipt sheet
+const EDITABLE_BY_NAME_ALL     = ['הערות'];
+const EDITABLE_BY_NAME_RECEIPT = ['סכום התשלום','הערות'];
+const MANDATORY_BY_NAME_RECEIPT= ['סכום התשלום'];
+
+function editableByName(isReceipt){ return isReceipt ? EDITABLE_BY_NAME_RECEIPT : EDITABLE_BY_NAME_ALL; }
+function mandatoryByName(isReceipt){ return isReceipt ? MANDATORY_BY_NAME_RECEIPT : []; }
 
 function vatCol(){ return (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; }
 
@@ -754,27 +759,25 @@ function renderInvoiceForm(){
   }
 
   // ── Extra sheet fields AA+
-  // Fields already shown elsewhere in the form — skip them in extraFields to avoid duplicates
   const TOP_FIELDS = new Set([
-    // Customer name — shown via lookup at top
     'שם לקוח','שם הלקוח','לקוח','שם','customer name','name',
-    // Invoice number — shown at top after ת"ז
     'מספר חשבונית','מספר חשבונית מס','מספר חשבונית מס / קבלה',
     'מספר קבלה','מספר חשבונית / קבלה','קבלה',
-    // Check-specific fields — handled by the check-fields section
-    'מספר שיק','מספר צ\'ק','תאריך תשלום','תאריך פרעון שיק',
-    'תאריך פרעון','צילום שיק','צ\'ק',
-    // Payment method — handled by radio buttons above
+    'מספר שיק',"מספר צ'ק",'תאריך תשלום','תאריך פרעון שיק',
+    'תאריך פרעון','צילום שיק',"צ'ק",
     'אמצעי תשלום',
+    ...(!isReceipt ? ['סכום התשלום'] : []),
   ]);
+  const editByName = isReceipt ? ['סכום התשלום','הערות'] : ['הערות'];
+  const mandByName = isReceipt ? ['סכום התשלום'] : [];
   if(extraFields.length){
     html+=`<div class="fsec"><div class="fsec-title">שדות נוספים</div>`;
     extraFields.forEach(({h,i})=>{
       if(CALC_COLS.includes(i)) return;
       if(TOP_FIELDS.has(h.trim())) return;
       const isEditByIdx  = EDITABLE_EXTRA.includes(i);
-      const isEditByName = EDITABLE_BY_NAME.includes(h);
-      const isMandatory  = MANDATORY_BY_NAME.includes(h);
+      const isEditByName = editByName.includes(h);
+      const isMandatory  = mandByName.includes(h);
       const isEdit = isEditByIdx || isEditByName;
       const cls    = isEdit ? 'inv-field' : '';
       const dis    = isEdit ? '' : 'disabled';
