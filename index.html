@@ -450,8 +450,15 @@ function renderListItems(){
   const sh=S.sheets[S.tab]; const q=S.search.toLowerCase();
   let rows=sh?.rows||[];
 
-  // Filter empty rows for both invoice and receipt sheets (key = col A = מספר חשבונית)
-  if(isInvSheet(S.tab)||isReceiptSheet(S.tab)){
+  // Filter empty rows:
+  // Invoice sheets → filter by ת"ז column (key for empty row detection)
+  // Receipt sheets → filter by first column
+  if(isInvSheet(S.tab)){
+    const invHeaders=sh?.headers||[];
+    const invIdCol=invHeaders.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const keyC=invIdCol>=0?invIdCol:1;
+    rows=rows.filter(r=>{const v=r[keyC]; return v!==''&&v!==null&&v!==undefined;});
+  } else if(isReceiptSheet(S.tab)){
     rows=rows.filter(r=>r[0]!==''&&r[0]!==null&&r[0]!==undefined);
   }
 
@@ -465,69 +472,90 @@ function renderListItems(){
     const headers=sh?.headers||[];
     const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
 
-    // Pre-build customer lookup map from לקוחות sheet (ת"ז → {name, business})
+    // Customer lookup: ת"ז → {name, biz}
     const custMap={};
     const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
-    if(custSh) custSh.rows.forEach(r=>{ const id=String(r[1]||'').trim(); if(id) custMap[id]={name:String(r[0]||''),biz:String(r[2]||'')}; });
+    if(custSh) custSh.rows.forEach(r=>{
+      const id=String(r[1]||'').trim();
+      if(id) custMap[id]={name:String(r[0]||''),biz:String(r[2]||'')};
+    });
 
-    // Find column indices by header name
-    const idCol   =headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
-    const dateCol  =headers.findIndex(h=>/תאריך/.test(h)&&!/פרעון|תשלום/.test(h));
-    const vatColIdx=headers.findIndex(h=>/סה.כ.*מע.מ|כולל מע.מ/.test(h));
-    // Fallback VAT col positions (AD=29 or AE=30)
-    const getVat=(row)=>{
-      if(vatColIdx>=0 && row[vatColIdx]) return row[vatColIdx];
-      return row[30]||row[29]||'';
-    };
+    // Find columns by header name
+    const invNumCol = headers.findIndex(h=>/מספר/.test(h)&&!/שיק/.test(h));
+    const idCol     = headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const dateCol   = headers.findIndex(h=>/תאריך/.test(h)&&!/פרעון|תשלום/.test(h));
+    const vatColIdx = headers.findIndex(h=>/מע.מ/.test(h)&&/סה.כ|כולל/.test(h));
+    const getVat    = row=>{ if(vatColIdx>=0&&row[vatColIdx]) return row[vatColIdx]; return row[30]||row[29]||''; };
 
     filtered.forEach(row=>{
       const ri=rows.indexOf(row);
       const isExp=S.expanded===ri;
       const bgColor=sh?.colors?.[ri]||'#ffffff';
-      const isWhite=bgColor==='#ffffff'||bgColor==='#fff'||bgColor==null;
+      const isWhite=!bgColor||bgColor==='#ffffff'||bgColor==='#fff';
       const rowStyle=isWhite?'':'background:'+bgColor+';';
-      const textDark=isWhite||isLightColor(bgColor);
-      const tc =textDark?'':'color:#fff;';
-      const tc2=textDark?'':'color:rgba(255,255,255,.85);';
+      const dark=isWhite||isLightColor(bgColor);
+      const col1=dark?'color:var(--navy)':'color:#fff';
+      const col2=dark?'color:var(--gray)':'color:rgba(255,255,255,.8)';
 
       let r1,r2,copyValue;
       if(isInv){
-        // Col A = invoice number, Col B = ת"ז, Col C = date
-        const invNum  = String(row[0]||'');
-        const idVal   = String(row[1]||'');   // ת"ז always col B
-        const cust    = custMap[idVal.trim()]||{};
-        const biz     = cust.biz||'';
-        const vatRaw  = getVat(row);
-        const vatStr  = vatRaw ? '₪'+Math.round(Number(vatRaw)) : '';
-        const dateStr = formatDateDisplay(dateCol>=0?row[dateCol]:'');
+        const invNum = invNumCol>=0 ? String(row[invNumCol]??'') : String(row[0]??'');
+        const idVal  = idCol>=0    ? String(row[idCol]??'')     : String(row[1]??'');
+        const cust   = custMap[idVal.trim()]||{};
+        const biz    = cust.biz||'';
+        const vatRaw = getVat(row);
+        const vatStr = vatRaw ? '₪'+Math.round(Number(vatRaw)) : '';
+        const dateStr= formatDateDisplay(dateCol>=0?row[dateCol]:'');
+        copyValue    = invNum;
 
-        // Line 1: ת"ז · שם העסק · מס' חשבונית
-        r1 = [esc(idVal), esc(biz), invNum?'<b>מס\' '+esc(invNum)+'</b>':''].filter(Boolean).join(' · ');
-        // Line 2: date · VAT total
-        r2 = [esc(dateStr), esc(vatStr)].filter(Boolean).join('&nbsp;&nbsp;&nbsp;');
-        copyValue = invNum;
+        // Line 1: ת"ז · שם העסק
+        r1 = [esc(idVal), esc(biz)].filter(Boolean).join(' · ');
+        // Line 2: date · VAT
+        r2 = [dateStr, vatStr].filter(Boolean).join('   ');
+
+        html+=`<div class="list-item" style="${rowStyle}">
+          <div class="li-main">
+            <div class="li-info">
+              ${invNum?`<div style="${col1};font-size:16px;font-weight:700;margin-bottom:2px">מס' ${esc(invNum)}</div>`:''}
+              ${r1?`<div class="li-r2" style="${col1}">${r1}</div>`:''}
+              ${r2?`<div class="li-r3" style="${col2}">${esc(r2)}</div>`:''}
+            </div>
+            <div class="li-btns">
+              ${invNum?`<div class="icon-btn" id="cp-${ri}" title="העתק מספר חשבונית" data-copy="${esc(invNum)}" onclick="copyFromAttr(this)">📋</div>`:''}
+              <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
+            </div>
+          </div>`;
       } else {
-        r1 = esc(String(row[0]||''));
+        r1 = esc(String(row[0]??''));
         r2 = [row[1]?esc(String(row[1])):'', row[2]?esc(String(row[2])):''].filter(Boolean).join(' · ');
-        copyValue = String(row[1]||'');
+        copyValue = String(row[1]??'');
+        html+=`<div class="list-item" style="${rowStyle}">
+          <div class="li-main">
+            <div class="li-info">
+              <div class="li-r1" style="${col1}">${r1}</div>
+              ${r2?`<div class="li-r2" style="${col2}">${r2}</div>`:''}
+            </div>
+            <div class="li-btns">
+              <div class="icon-btn" id="cp-${ri}" data-copy="${esc(copyValue)}" onclick="copyFromAttr(this)">📋</div>
+              <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
+            </div>
+          </div>`;
       }
 
-      html+=`<div class="list-item" style="${rowStyle}">
-        <div class="li-main">
-          <div class="li-info">
-            <div class="li-r1" style="${tc}white-space:normal;line-height:1.5">${r1}</div>
-            ${r2?`<div class="li-r2" style="${tc2}">${r2}</div>`:''}
-          </div>
-          <div class="li-btns">
-            <div class="icon-btn" id="cp-${ri}" title="העתק מספר חשבונית" data-copy="${esc(copyValue)}" onclick="copyFromAttr(this)">📋</div>
-            <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
-          </div>
-        </div>`;
       if(isExp){
         html+=`<div class="li-expanded">`;
-        (sh?.headers||[]).forEach((h,hi)=>{
-          const v=row[hi]; if(v===''||v===null||v===undefined)return;
-          html+=`<div class="ex-row"><span class="ex-lbl">${esc(h)}</span><span class="ex-val">${esc(String(v))}</span></div>`;
+        headers.forEach((h,hi)=>{
+          let v=row[hi];
+          if(v===''||v===null||v===undefined) return;
+          // Format dates — skip time portion
+          if(v instanceof Date || (typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v))) {
+            v=formatDateDisplay(v);
+          } else if(typeof v==='number'&&h&&/תאריך/.test(h)){
+            v=formatDateDisplay(v);
+          } else {
+            v=String(v);
+          }
+          html+=`<div class="ex-row"><span class="ex-lbl">${esc(h)}</span><span class="ex-val">${esc(v)}</span></div>`;
         });
         html+=`</div>`;
       }
@@ -661,40 +689,54 @@ function formatDateDisplay(v){
   return s;
 }
 
-// Look up customer details from any invoice sheet by invoice number
 function lookupInvoice(invNum){
   invNum=(invNum||'').trim();
   if(!invNum) return;
-  // Search all invoice-like sheets (not receipt-only, not customers)
+
+  // Find the invoice sheet (any sheet with חשבוני but not לקוח and not receipt-only)
   const invSheetName=S.sheetNames.find(n=>isInvSheet(n));
   const invSheet=invSheetName?S.sheets[invSheetName]:null;
   if(!invSheet){ alert('לא נמצא גיליון חשבוניות'); return; }
 
-  // Match loosely — compare as strings, trim, allow numeric match
+  // Find the מספר חשבונית column by header name
+  const invHeaders=invSheet.headers;
+  const invNumCol=invHeaders.findIndex(h=>/מספר/.test(h)&&!/שיק/.test(h));
+
+  // Search that column (or fallback to col 0)
+  const searchCol=invNumCol>=0?invNumCol:0;
   const match=invSheet.rows.find(r=>{
-    const v=String(r[0]||'').trim();
-    return v===invNum || v===String(parseInt(invNum)) || parseInt(v)===parseInt(invNum);
+    const v=String(r[searchCol]??'').trim();
+    return v===invNum || Number(v)===Number(invNum);
   });
 
   const idEl=$('rec-id'), nameEl=$('rec-name');
   if(match){
-    // Find ID column (ת"ז / ח"פ) and name column by header
-    const headers=invSheet.headers;
-    const idCol  =headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
-    const nameCol=headers.findIndex(h=>/שם לקוח|שם הלקוח/.test(h));
-    const idVal  =idCol  >=0 ? String(match[idCol]  ||'') : String(match[1]||'');
-    const nameVal=nameCol>=0 ? String(match[nameCol]||'') : '';
+    const idCol  =invHeaders.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const nameCol=invHeaders.findIndex(h=>/שם לקוח|שם הלקוח/.test(h));
+    const idVal  =String(idCol  >=0?match[idCol]  :match[1]||'');
+    const nameVal=String(nameCol>=0?match[nameCol] :match[2]||'');
 
-    if(idEl)  {idEl.value=idVal;   idEl.style.color='';}
-    if(nameEl) nameEl.value=nameVal;
+    // Also try to get name from לקוחות sheet if not in invoice sheet
+    let resolvedName=nameVal;
+    if(!resolvedName&&idVal){
+      const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
+      if(custSh){
+        const cm=custSh.rows.find(r=>String(r[1]||'').trim()===idVal.trim());
+        if(cm) resolvedName=String(cm[0]||'');
+      }
+    }
+
+    if(idEl)  {idEl.value=idVal;idEl.style.color='';}
+    if(nameEl) nameEl.value=resolvedName;
     S.formVals['id']      =idVal;
-    S.formVals['custName']=nameVal;
+    S.formVals['custName']=resolvedName;
+    S.formVals['invRef']  =invNum;
     document.querySelectorAll('.rec-field').forEach(el=>el.disabled=false);
   } else {
     if(idEl)  {idEl.value='לא נמצא';idEl.style.color='var(--red)';}
     if(nameEl) nameEl.value='';
     document.querySelectorAll('.rec-field').forEach(el=>el.disabled=true);
-    alert('חשבונית מספר '+invNum+' לא נמצאה');
+    alert('חשבונית מספר '+invNum+' לא נמצאה בגיליון חשבוניות');
   }
 }
 
