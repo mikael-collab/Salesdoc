@@ -512,34 +512,38 @@ function showForm(){
 function navBack(){ S.view='list'; $('content').innerHTML=''; buildNav(); renderList(); }
 
 // ── Customer form — lookup by ID, fields locked until ID entered
+// ── Customer form — all fields enabled, ID uniqueness checked on blur
 function renderCustomerForm(){
   const headers=S.sheets[S.tab]?.headers||[];
   let html=`<div class="form-scroll"><div class="fsec"><div class="fsec-title">לקוח חדש</div>`;
-
   headers.forEach((h,i)=>{
-    const isId=i===1; // column B = ת"ז / ח"פ — enter first
-    if(i===0){
-      // Name — auto-filled from ID lookup, disabled until ID filled
-      html+=`<div class="fgrp">
-        <label class="flabel">${esc(h)}</label>
-        <input type="text" id="cf-0" value="" disabled placeholder="ימולא אוטומטית לאחר הזנת ת''ז">
-      </div>`;
-    } else if(isId){
-      html+=`<div class="fgrp">
-        <label class="flabel">${esc(h)}</label>
-        <input type="text" id="cf-1" value="" placeholder="הזן ת''ז / ח''פ" oninput="S.formVals[1]=this.value" onblur="lookupCustomer(this.value,false)">
-        <div class="customer-found" id="cust-found"></div>
-        <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית</div>
-      </div>`;
-    } else {
-      html+=`<div class="fgrp">
-        <label class="flabel">${esc(h)}</label>
-        <input type="text" id="cf-${i}" value="" disabled placeholder="הזן ${esc(h)}…" oninput="S.formVals[${i}]=this.value">
-      </div>`;
-    }
+    html+=`<div class="fgrp">
+      <label class="flabel">${esc(h)}${i===1?` <span style="color:var(--red)">*</span>`:''}</label>
+      <input type="text" id="cf-${i}" value="" placeholder="הזן ${esc(h)}…"
+        oninput="S.formVals[${i}]=this.value"
+        ${i===1?'onblur="checkCustomerId(this.value)"':''}>
+    </div>`;
   });
+  html+=`<div id="cust-err" class="err" style="display:none"></div>`;
   html+=`</div></div>`;
   $('content').innerHTML=html;
+}
+
+function checkCustomerId(val){
+  val=(val||'').trim();
+  const err=$('cust-err');
+  const saveBtn=$('tb-save');
+  if(!val){ err.style.display='none'; saveBtn.disabled=false; return; }
+  const sh=S.sheets[S.tab];
+  const existing=sh?.rows.find(r=>String(r[1]||'').trim()===val);
+  if(existing){
+    err.textContent='ת"ז / ח"פ '+val+' כבר קיים: '+existing[0]+' — נא לשנות';
+    err.style.display='block';
+    saveBtn.disabled=true;
+  } else {
+    err.style.display='none';
+    saveBtn.disabled=false;
+  }
 }
 
 function lookupCustomer(idVal, isInvoice){
@@ -567,22 +571,17 @@ function lookupCustomer(idVal, isInvoice){
       enableInvoiceFields(false);
     }
   } else {
-    // Fill customer form fields
+    // Customer form — auto-fill fields if existing customer found, but fields stay enabled either way
     if(match){
       const nameInp=$('cf-0');
-      if(nameInp){nameInp.value=match[0]||'';S.formVals[0]=match[0]||'';}
+      if(nameInp&&!nameInp.value){nameInp.value=match[0]||'';S.formVals[0]=match[0]||'';}
       const found=$('cust-found');
       if(found){found.textContent='✓ לקוח קיים: '+match[0];found.style.display='block';}
-      // enable all fields
-      document.querySelectorAll('[id^=cf-]').forEach(el=>{el.disabled=false;});
-      // fill other known fields
       match.forEach((v,i)=>{
         const el=$('cf-'+i);
-        if(el&&i!==0&&i!==1){el.value=v||'';S.formVals[i]=v||'';}
+        if(el&&i!==0&&i!==1&&!el.value){el.value=v||'';S.formVals[i]=v||'';}
       });
     } else {
-      // New customer — enable fields, clear name
-      document.querySelectorAll('[id^=cf-]').forEach(el=>{el.disabled=false;});
       const found=$('cust-found'); if(found)found.style.display='none';
     }
   }
@@ -971,12 +970,15 @@ async function submitForm(){
     finally{ saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; }
 
   } else {
-    // Customer sheet — simple column-by-index write
+    const idVal=(S.formVals[1]||'').trim();
+    if(!idVal){ alert('נא להזין ת"ז / ח"פ'); return; }
+    // Run duplicate check one more time in case user bypassed blur
+    const existing=sh.rows.find(r=>String(r[1]||'').trim()===idVal);
+    if(existing){ alert('ת"ז / ח"פ '+idVal+' כבר קיים: '+existing[0]); return; }
     const row=sh.headers.map((_,i)=>S.formVals[i]||'');
     if(S.isDemo){ sh.rows.push(row); navBack(); saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; return; }
     try{
-      const res=await fetch(S.scriptUrl,{method:'POST',body:JSON.stringify({action:'append',sheet:S.tab,row})});
-      const data=await res.json();
+      const data=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
       if(!data.ok)throw new Error(data.error);
       await refreshSheets(); navBack();
     }catch(e){ alert('שגיאה בשמירה: '+e.message); }
