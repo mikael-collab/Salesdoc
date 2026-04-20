@@ -621,7 +621,7 @@ function renderReceiptOnlyForm(){
           <input type="text" id="rec-id" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
         </div>
         <div class="fgrp">
-          <label class="flabel">שם לקוח</label>
+          <label class="flabel">שם העסק</label>
           <input type="text" id="rec-name" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
         </div>
         <div class="fgrp">
@@ -712,18 +712,14 @@ function lookupInvoice(invNum){
   const idEl=$('rec-id'), nameEl=$('rec-name');
   if(match){
     const idCol  =invHeaders.findIndex(h=>/ת.ז|ח.פ/.test(h));
-    const nameCol=invHeaders.findIndex(h=>/שם לקוח|שם הלקוח/.test(h));
-    const idVal  =String(idCol  >=0?match[idCol]  :match[1]||'');
-    const nameVal=String(nameCol>=0?match[nameCol] :match[2]||'');
+    const idVal  =String(idCol>=0?match[idCol]:match[1]||'').trim();
 
-    // Also try to get name from לקוחות sheet if not in invoice sheet
-    let resolvedName=nameVal;
-    if(!resolvedName&&idVal){
-      const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
-      if(custSh){
-        const cm=custSh.rows.find(r=>String(r[1]||'').trim()===idVal.trim());
-        if(cm) resolvedName=String(cm[0]||'');
-      }
+    // Always get name from לקוחות sheet — don't use invoice sheet columns as fallback
+    let resolvedName='';
+    const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
+    if(custSh){
+      const cm=custSh.rows.find(r=>String(r[1]||'').trim()===idVal);
+      if(cm) resolvedName=String(cm[0]||'');
     }
 
     if(idEl)  {idEl.value=idVal;idEl.style.color='';}
