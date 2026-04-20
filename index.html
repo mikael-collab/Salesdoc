@@ -726,15 +726,20 @@ function lookupInvoice(invNum){
 
   const idEl=$('rec-id'), nameEl=$('rec-name');
   if(match){
-    const idCol  =invHeaders.findIndex(h=>/ת.ז|ח.פ/.test(h));
-    const idVal  =String(idCol>=0?match[idCol]:match[1]||'').trim();
+    const idCol=invHeaders.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const idValRaw=String(idCol>=0?match[idCol]:match[1]||'').trim();
 
-    // Always get name from לקוחות sheet — don't use invoice sheet columns as fallback
-    let resolvedName='';
+    // Get ת"ז from לקוחות sheet — preserves leading zero (stored as text there)
     const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
+    let idVal=idValRaw;
+    let resolvedName='';
     if(custSh){
-      const cm=custSh.rows.find(r=>String(r[1]||'').trim()===idVal);
-      if(cm) resolvedName=String(cm[2]||cm[0]||''); // col 2 = שם העסק, fallback to שם לקוח
+      // Match numerically to handle leading-zero mismatch
+      const cm=custSh.rows.find(r=>Number(String(r[1]||'').trim())===Number(idValRaw));
+      if(cm){
+        idVal=String(cm[1]||'').trim(); // ← use the string from לקוחות (preserves leading 0)
+        resolvedName=String(cm[2]||cm[0]||'');
+      }
     }
 
     if(idEl)  {idEl.value=idVal;idEl.style.color='';}
@@ -1135,7 +1140,13 @@ async function submitForm(){
     put(['אמצעי תשלום','סוג תשלום','סוג'],         S.formVals['pay']||'');
     put(['מספר שיק'],                               S.formVals['checkNum']||'');
     put(['תאריך פרעון','תאריך תשלום'],             fmtDate(S.formVals['checkDate']||''));
-    put(['צילום שיק'],                              S.formVals['checkPhoto']?'צולם':'');
+    // Send 'צולם ✓' if photo taken — Google Sheets can't store images via API
+    const photoVal = S.formVals['checkPhoto'] ? 'צולם ✓' : '';
+    put(['צילום שיק','תמונת שיק','צ׳ק תמונה'],    photoVal);
+    // Also save base64 in localStorage keyed by invoice ref for later reference
+    if(S.formVals['checkPhoto']){
+      try{ localStorage.setItem('check_'+S.formVals['invRef'], S.formVals['checkPhoto']); }catch{}
+    }
     put(['הערות'],                                  S.formVals['notes']||'');
     const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
     const row=new Array(Math.max(headers.length,10)).fill('');
@@ -1378,3 +1389,4 @@ try{const u=localStorage.getItem('sd_url');if(u)$('inp-url').value=u;}catch{}
 </script>
 </body>
 </html>
+  
