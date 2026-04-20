@@ -267,9 +267,8 @@ function handleWrite(ss, p) {
       }
       if (targetRow === -1) targetRow = data.length + 1;
       p.cells.forEach(function(c) { sh.getRange(targetRow, c.col + 1).setValue(c.val); });
-    } else if (p.action === 'append') {
-      sh.appendRow(p.row);
     } else if (p.cell) {
+      // Single cell write
       sh.getRange(p.cell).setValue(p.value);
     }
     return jsonResponse({ ok: true });
@@ -1254,16 +1253,14 @@ async function submitForm(){
       put(payAmtCol, $('extra-'+payAmtCol)?.value||'');
     }
 
-    // SKU quantities — find each qty column by its header name ("כמות" appears multiple times)
-    // The sheet has pairs: [SKU name col][כמות col] repeating. We match qty cols by position.
-    // Qty cols are the "כמות" headers at positions E,G,I,K,M,O,Q,S,U,W,Y (1-based: 4,6,8…)
-    // We find them by scanning for headers named "כמות" in order
+    // SKU quantities ONLY — never write SKU name columns (they have dropdowns/formulas)
     const qtyCols=[];
     headers.forEach((h,i)=>{ if(h.trim()==='כמות') qtyCols.push(i); });
     SKUS.forEach((sku,si)=>{
       const qtyCol = qtyCols[si] !== undefined ? qtyCols[si] : (3+si*2+1);
       const qty = S.skuQtys[si]||0;
       if(qty>0) put(qtyCol, qty);
+      // SKU name col (qtyCol-1) intentionally NOT written — preserves dropdown
     });
 
     // Editable extra fields
@@ -1279,33 +1276,19 @@ async function submitForm(){
       if(!S.scriptUrl) throw new Error('Script URL not configured');
 
       const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
-
-      // Find key column index for "first empty row" detection on the server
       const keyHeader = isReceipt ? ['מספר','קבלה'] : ['ת"ז','ח"פ'];
       const keyColIdx = headers.findIndex(h=>keyHeader.some(p=>h.includes(p)));
-
-      // Build sparse cell list — only columns with values, preserves all formulas
       const cells = nonEmpty.map(([ci,v])=>({col:parseInt(ci), val:v}));
 
-      // Try writeSparseRow (updated script): finds correct row, writes only specified cells
-      let data = await xhrPost(S.scriptUrl, {
+      // Always use writeSparseRow — writes ONLY specified cells into first empty row
+      // This preserves all formatting, formulas, borders and dropdowns in the sheet
+      const data = await xhrPost(S.scriptUrl, {
         action: 'writeSparseRow',
         sheet: S.tab,
         keyCol: keyColIdx >= 0 ? keyColIdx : 1,
         cells
       });
-
-      // If old script is deployed, fall back to append (wrong row but saves data)
-      if(!data.ok && data.error && (data.error.includes('a1Notation')||data.error.includes('cells'))){
-        const rowLen=Math.max(headers.length,37);
-        const row=new Array(rowLen).fill('');
-        nonEmpty.forEach(([ci,v])=>{const idx=parseInt(ci);if(!isNaN(idx))row[idx]=v;});
-        data = await xhrPost(S.scriptUrl, {action:'append', sheet:S.tab, row});
-        if(!data.ok) throw new Error(data.error||'Script error');
-        alert('שמור ✓ — שים לב: כדי לכתוב לשורה הנכונה יש לעדכן את ה-Apps Script');
-      } else if(!data.ok){
-        throw new Error(data.error||'Script error');
-      }
+      if(!data.ok) throw new Error(data.error||'Script error');
 
       await refreshSheets();
       navBack();
@@ -1332,7 +1315,10 @@ async function submitForm(){
     const row=sh.headers.map((_,i)=>S.formVals[i]||'');
     if(S.isDemo){ sh.rows.push(row); navBack(); saveBtn.textContent='שמור ✓'; saveBtn.disabled=false; return; }
     try{
-      const data=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
+      // Build cells array for customer — all non-empty fields by index
+      const cells=row.map((v,i)=>({col:i,val:v})).filter(c=>c.val!=='');
+      // Find first empty row by ת"ז column (col 1)
+      const data=await xhrPost(S.scriptUrl,{action:'writeSparseRow',sheet:S.tab,keyCol:1,cells});
       if(!data.ok)throw new Error(data.error);
       await refreshSheets(); navBack();
     }catch(e){ alert('שגיאה בשמירה: '+e.message); }
