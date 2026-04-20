@@ -190,57 +190,68 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
           <div class="setup-step"><div class="snum">5</div><div>העתק את ה-<strong>Web app URL</strong> ושלח לאיש המכירות.</div></div>
           <div class="code-box">
             <button class="cbtn" onclick="copyScript()">📋 Copy script</button>
-            <pre id="script-txt">function doGet() {
+            <pre id="script-txt">function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // If a 'data' parameter is present, this is a write operation
+  if (e && e.parameter && e.parameter.data) {
+    return handleWrite(ss, JSON.parse(e.parameter.data));
+  }
+
+  // Otherwise return all sheet data (normal load)
   var result = ss.getSheets().map(function(sh) {
     return { name: sh.getName(), rows: sh.getDataRange().getValues() };
   });
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, sheets: result }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return jsonResponse({ ok: true, sheets: result });
 }
 
 function doPost(e) {
   try {
-    var p  = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var p = JSON.parse(e.postData.contents);
+    return handleWrite(SpreadsheetApp.getActiveSpreadsheet(), p);
+  } catch(err) {
+    return jsonResponse({ ok: false, error: err.message });
+  }
+}
+
+function handleWrite(ss, p) {
+  try {
     var sh = ss.getSheetByName(p.sheet);
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
 
     if (p.action === 'writeSparseRow') {
-      // Find first row where keyCol is empty (skip header row 1)
       var data    = sh.getDataRange().getValues();
-      var keyCol  = typeof p.keyCol === 'number' ? p.keyCol : 1; // 0-indexed
+      var keyCol  = typeof p.keyCol === 'number' ? p.keyCol : 1;
       var targetRow = -1;
       for (var r = 1; r < data.length; r++) {
         var cell = data[r][keyCol];
         if (cell === '' || cell === null || cell === undefined) {
-          targetRow = r + 1; // 1-indexed sheet row
+          targetRow = r + 1;
           break;
         }
       }
-      if (targetRow === -1) targetRow = data.length + 1; // no empty row → append
-
-      // Write ONLY the cells that have values — all other cells stay untouched
-      // This preserves existing formulas (AB-AD) and product names
+      if (targetRow === -1) targetRow = data.length + 1;
       p.cells.forEach(function(c) {
-        sh.getRange(targetRow, c.col + 1).setValue(c.val); // col is 0-indexed
+        sh.getRange(targetRow, c.col + 1).setValue(c.val);
       });
 
     } else if (p.action === 'append') {
       sh.appendRow(p.row);
-    } else {
+
+    } else if (p.cell) {
       sh.getRange(p.cell).setValue(p.value);
     }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ ok: true });
   } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ ok: false, error: err.message });
   }
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }</pre>
           </div>
           <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ תמיד פרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת).</p>
@@ -589,7 +600,8 @@ const EDITABLE_EXTRA = [36];             // editable after customer lookup
 const SKIP_COLS      = new Set(CALC_COLS);
 const VAT            = 0.18;
 // Fields that are editable regardless of column index (matched by header name)
-const EDITABLE_BY_NAME = ['סכום התשלום','הערות'];
+const EDITABLE_BY_NAME  = ['סכום התשלום','הערות']; // these fields are enabled by name
+const MANDATORY_BY_NAME = ['סכום התשלום'];          // only these get the red * marker
 
 function vatCol(){ return (isInvSheet(S.tab)&&!isReceiptSheet(S.tab)) ? 30 : 29; }
 
@@ -744,11 +756,12 @@ function renderInvoiceForm(){
       if(TOP_FIELDS.has(h.trim())) return;
       const isEditByIdx  = EDITABLE_EXTRA.includes(i);
       const isEditByName = EDITABLE_BY_NAME.includes(h);
+      const isMandatory  = MANDATORY_BY_NAME.includes(h);
       const isEdit = isEditByIdx || isEditByName;
       const cls    = isEdit ? 'inv-field' : '';
       const dis    = isEdit ? '' : 'disabled';
       html+=`<div class="fgrp">
-        <label class="flabel">${esc(h)}${isEditByName?` <span style="color:var(--red)">*</span>`:''}</label>
+        <label class="flabel">${esc(h)}${isMandatory?` <span style="color:var(--red)">*</span>`:''}</label>
         <input type="text" id="extra-${i}" class="${cls}" ${dis} placeholder="${isEdit?'הזן…':''}"
           oninput="S.formVals['extra${i}']=this.value">
       </div>`;
@@ -974,25 +987,27 @@ function colLetter(n){
   return s;
 }
 
-// POST to Apps Script via XHR — confirmed more reliable than fetch for Apps Script redirects
-function xhrPost(url, payload){
+// Send data to Apps Script via GET request with encoded payload
+// GET requests never have CORS/redirect issues unlike POST
+function scriptRequest(url, payload){
   return new Promise((resolve, reject)=>{
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    const sep     = url.includes('?') ? '&' : '?';
+    const fullUrl = url + sep + 'data=' + encoded;
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
+    xhr.open('GET', fullUrl, true);
     xhr.timeout = 30000;
-    xhr.onreadystatechange = function(){
-      if(xhr.readyState !== 4) return;
-      if(xhr.status === 0){
-        reject(new Error('Network error — check internet and script URL'));
-        return;
-      }
+    xhr.onload = ()=>{
       try{ resolve(JSON.parse(xhr.responseText)); }
-      catch(e){ reject(new Error('Bad response ('+xhr.status+'): '+xhr.responseText.slice(0,120))); }
+      catch{ reject(new Error('Bad response: ' + xhr.responseText.slice(0,100))); }
     };
-    xhr.ontimeout = ()=>reject(new Error('Request timed out after 30s'));
-    xhr.send(JSON.stringify(payload));
+    xhr.onerror   = ()=>reject(new Error('Network error — check internet connection'));
+    xhr.ontimeout = ()=>reject(new Error('Timed out'));
+    xhr.send();
   });
 }
+// Keep xhrPost as alias so existing calls work
+const xhrPost = scriptRequest;
 
 // Re-fetch all sheets from the script after a save (to import calculated values)
 async function refreshSheets(){
