@@ -192,21 +192,20 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
           <div class="code-box">
             <button class="cbtn" onclick="copyScript()">📋 Copy script</button>
             <pre id="script-txt">// ⚠️ Replace PASTE_SHEET_ID_HERE with your actual Google Sheet ID
-// Sheet ID is the long code in the URL:
-// docs.google.com/spreadsheets/d/SHEET_ID/edit
 var SHEET_ID = 'PASTE_SHEET_ID_HERE';
 
 function doGet(e) {
   var ss = SpreadsheetApp.openById(SHEET_ID);
-
-  // Write operation via ?data= parameter
   if (e && e.parameter && e.parameter.data) {
     return handleWrite(ss, JSON.parse(e.parameter.data));
   }
-
-  // Read operation — return all sheet data
+  // Return sheet data including row background colors
   var result = ss.getSheets().map(function(sh) {
-    return { name: sh.getName(), rows: sh.getDataRange().getValues() };
+    var range = sh.getDataRange();
+    var rows  = range.getValues();
+    // Get background color of column A for each row (used for row coloring in app)
+    var colors = range.getBackgrounds().map(function(r){ return r[0]; });
+    return { name: sh.getName(), rows: rows, colors: colors };
   });
   return jsonResponse({ ok: true, sheets: result });
 }
@@ -224,30 +223,21 @@ function handleWrite(ss, p) {
   try {
     var sh = ss.getSheetByName(p.sheet);
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
-
     if (p.action === 'writeSparseRow') {
       var data = sh.getDataRange().getValues();
       var keyCol = typeof p.keyCol === 'number' ? p.keyCol : 1;
       var targetRow = -1;
       for (var r = 1; r < data.length; r++) {
         var cell = data[r][keyCol];
-        if (cell === '' || cell === null || cell === undefined) {
-          targetRow = r + 1;
-          break;
-        }
+        if (cell === '' || cell === null || cell === undefined) { targetRow = r + 1; break; }
       }
       if (targetRow === -1) targetRow = data.length + 1;
-      p.cells.forEach(function(c) {
-        sh.getRange(targetRow, c.col + 1).setValue(c.val);
-      });
-
+      p.cells.forEach(function(c) { sh.getRange(targetRow, c.col + 1).setValue(c.val); });
     } else if (p.action === 'append') {
       sh.appendRow(p.row);
-
     } else if (p.cell) {
       sh.getRange(p.cell).setValue(p.value);
     }
-
     return jsonResponse({ ok: true });
   } catch(err) {
     return jsonResponse({ ok: false, error: err.message });
@@ -255,9 +245,7 @@ function handleWrite(ss, p) {
 }
 
 function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }</pre>
           </div>
           <p style="font-size:12px;color:var(--gray);line-height:1.6;margin:6px 0 0">⚠️ תמיד פרסם <strong>פריסה חדשה</strong> (לא לעדכן קיימת). לכל גיליון — פרויקט Apps Script נפרד עם ה-Sheet ID שלו.</p>
@@ -382,8 +370,14 @@ function launch(url,rawSheets,isDemo){
   rawSheets.forEach(sh=>{
     S.sheetNames.push(sh.name);
     const headers=(sh.rows[0]||[]);
-    const rows=sh.rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
-    S.sheets[sh.name]={headers,rows};
+    const allRows=sh.rows.slice(1);
+    const allColors=(sh.colors||[]).slice(1);
+    const rows=allRows.filter((r,i)=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+    const colors=allRows.reduce((acc,r,i)=>{
+      if(r.some(c=>c!==''&&c!==null&&c!==undefined)) acc.push(allColors[i]||'#ffffff');
+      return acc;
+    },[]);
+    S.sheets[sh.name]={headers,rows,colors};
   });
   S.tab=S.sheetNames[0]||''; S.view='list'; S.search=''; S.expanded=-1;
   $('demo-bar').style.display=isDemo?'block':'none';
@@ -472,12 +466,17 @@ function renderListItems(){
     filtered.forEach(row=>{
       const ri=rows.indexOf(row);
       const isExp=S.expanded===ri;
-      html+=`<div class="list-item">
+      const bgColor=sh?.colors?.[ri]||'#ffffff';
+      const isWhite=bgColor==='#ffffff'||bgColor==='#fff'||bgColor==null;
+      const rowStyle=isWhite?'':'background:'+bgColor+';';
+      // Compute readable text color from background
+      const textDark=isWhite||isLightColor(bgColor);
+      html+=`<div class="list-item" style="${rowStyle}">
         <div class="li-main">
           <div class="li-info">
-            <div class="li-r1">${esc(row[0])}</div>
-            ${row[1]?`<div class="li-r2">${esc(row[1])}</div>`:''}
-            ${row[2]?`<div class="li-r3">${esc(row[2])}</div>`:''}
+            <div class="li-r1" style="${textDark?'':'color:#fff'}">${esc(row[0])}</div>
+            ${row[1]?`<div class="li-r2" style="${textDark?'':'color:rgba(255,255,255,.8)'}">${esc(row[1])}</div>`:''}
+            ${row[2]?`<div class="li-r3" style="${textDark?'':'color:rgba(255,255,255,.7)'}">${esc(row[2])}</div>`:''}
           </div>
           <div class="li-btns">
             <div class="icon-btn" id="cp-${ri}" onclick="copyVal(${ri},'${esc(String(row[1]||''))}')">📋</div>
@@ -528,7 +527,7 @@ function navBack(){
 }
 
 // ── Customer form — lookup by ID, fields locked until ID entered
-// ── Receipt-only form (קבלות) — references existing invoice, no items/SKUs
+// ── Receipt-only form (קבלות) — invoice number first, then auto-lookup customer
 function renderReceiptOnlyForm(){
   const content=$('content');
   let html=`
@@ -536,25 +535,28 @@ function renderReceiptOnlyForm(){
       <div class="fsec">
         <div class="fsec-title">פרטי קבלה</div>
         <div class="fgrp">
-          <label class="flabel">ת"ז / ח"פ לקוח</label>
-          <input type="text" id="inv-id" placeholder="הזן ת''ז / ח''פ"
-            oninput="S.formVals['id']=this.value" onblur="lookupCustomer(this.value,true)">
-          <div class="customer-found" id="inv-cust-name"></div>
-          <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית</div>
+          <label class="flabel">מספר חשבונית <span style="color:var(--red)">*</span></label>
+          <input type="text" id="rec-invnum" placeholder="הזן מספר חשבונית"
+            oninput="S.formVals['invRef']=this.value"
+            onblur="lookupInvoice(this.value)">
+          <div class="input-hint">לאחר הזנת מספר החשבונית — פרטי הלקוח יתמלאו אוטומטית</div>
         </div>
         <div class="fgrp">
-          <label class="flabel">מספר חשבונית מקורית <span style="color:var(--red)">*</span></label>
-          <input type="text" id="rec-invnum" class="inv-field" disabled placeholder="מספר החשבונית שמשולמת"
-            oninput="S.formVals['invRef']=this.value">
+          <label class="flabel">ת"ז / ח"פ לקוח</label>
+          <input type="text" id="rec-id" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
+        </div>
+        <div class="fgrp">
+          <label class="flabel">שם לקוח</label>
+          <input type="text" id="rec-name" disabled placeholder="יתמלא אוטומטית" style="background:#F3F4F8;color:#9AA3B5;">
         </div>
         <div class="fgrp">
           <label class="flabel">סכום לתשלום <span style="color:var(--red)">*</span></label>
-          <input type="number" id="rec-amount" class="inv-field" disabled placeholder="0.00"
-            oninput="S.formVals['amount']=this.value">
+          <input type="number" id="rec-amount" class="rec-field" disabled placeholder="0" step="1"
+            oninput="S.formVals['amount']=Math.round(this.value||0)">
         </div>
         <div class="fgrp">
           <label class="flabel">תאריך</label>
-          <input type="date" id="inv-date" class="inv-field" disabled value="${today()}"
+          <input type="date" id="rec-date" class="rec-field" disabled value="${today()}"
             oninput="S.formVals['date']=this.value">
         </div>
       </div>
@@ -562,28 +564,23 @@ function renderReceiptOnlyForm(){
       <div class="fsec">
         <div class="fsec-title">אמצעי תשלום</div>
         <div class="pay-options">
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash"     value="מזומן" onchange="onPayChange(this.value)"><label for="pay-cash">💵 מזומן</label></div>
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-check"    value="שיק"   onchange="onPayChange(this.value)"><label for="pay-check">📝 שיק</label></div>
-          <div class="pay-opt"><input type="radio" name="pay" id="pay-transfer" value="העברה" onchange="onPayChange(this.value)"><label for="pay-transfer">🏦 העברה</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash"  value="מזומן" onchange="onPayChange(this.value)"><label for="pay-cash">💵 מזומן</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-check" value="שיק"   onchange="onPayChange(this.value)"><label for="pay-check">📝 שיק</label></div>
         </div>
         <div id="check-fields" style="display:none;margin-top:10px">
           <div class="fgrp">
             <label class="flabel">מספר שיק <span style="color:var(--red)">*</span></label>
-            <input type="text" id="check-num" class="inv-field" placeholder="מספר השיק" oninput="S.formVals['checkNum']=this.value">
+            <input type="text" id="check-num" class="rec-field" disabled placeholder="מספר השיק" oninput="S.formVals['checkNum']=this.value">
           </div>
           <div class="fgrp">
             <label class="flabel">תאריך פרעון שיק <span style="color:var(--red)">*</span></label>
-            <input type="date" id="check-date" class="inv-field" oninput="S.formVals['checkDate']=this.value">
+            <input type="date" id="check-date" class="rec-field" disabled oninput="S.formVals['checkDate']=this.value">
           </div>
           <div class="fgrp">
             <label class="flabel">צילום שיק <span style="color:var(--red)">*</span></label>
             <div class="photo-wrap">
-              <label class="photo-btn" for="check-photo">
-                <span id="photo-icon">📷</span>
-                <span id="photo-label">צלם / בחר תמונה</span>
-              </label>
-              <input type="file" id="check-photo" accept="image/*" capture="environment"
-                style="display:none" onchange="onCheckPhoto(this)">
+              <label class="photo-btn" for="check-photo"><span id="photo-icon">📷</span><span id="photo-label">צלם / בחר תמונה</span></label>
+              <input type="file" id="check-photo" accept="image/*" capture="environment" style="display:none" onchange="onCheckPhoto(this)">
               <img id="check-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;border:1px solid var(--border);">
             </div>
           </div>
@@ -593,13 +590,37 @@ function renderReceiptOnlyForm(){
       <div class="fsec" style="padding-bottom:14px">
         <div class="fsec-title">הערות</div>
         <div class="fgrp">
-          <textarea id="inv-notes" class="inv-field" disabled placeholder="הערות לקבלה…"
-            oninput="S.formVals['notes']=this.value"></textarea>
+          <textarea id="rec-notes" class="rec-field" disabled placeholder="הערות לקבלה…" oninput="S.formVals['notes']=this.value"></textarea>
         </div>
       </div>
     </div>`;
   content.innerHTML=html;
   S.formVals['date']=today();
+}
+
+// Look up customer details from חשבוניות sheet by invoice number
+function lookupInvoice(invNum){
+  invNum=(invNum||'').trim();
+  if(!invNum) return;
+  // Search חשבוניות sheet for matching invoice number (col A)
+  const invSheet=S.sheets['חשבוניות'];
+  if(!invSheet) return;
+  const match=invSheet.rows.find(r=>String(r[0]||'').trim()===invNum);
+  if(match){
+    const id=$('rec-id'), name=$('rec-name');
+    if(id)  id.value  = match[1]||''; // ת"ז is col B
+    if(name) name.value= match[2]||''; // שם לקוח — adjust col if needed
+    S.formVals['id']      = match[1]||'';
+    S.formVals['custName']= match[2]||'';
+    // Enable the rest of the fields
+    document.querySelectorAll('.rec-field').forEach(el=>el.disabled=false);
+  } else {
+    // Invoice not found — clear and show hint
+    const id=$('rec-id'), name=$('rec-name');
+    if(id)   id.value='לא נמצא';
+    if(name) name.value='';
+    document.querySelectorAll('.rec-field').forEach(el=>el.disabled=true);
+  }
 }
 
 // ── Customer form — all fields enabled, first 4 mandatory, ID uniqueness checked on blur
@@ -1177,11 +1198,28 @@ async function refreshSheets(){
     if(data.ok) _applyRefresh(data.sheets);
   }catch{ /* silent — best effort */ }
 }
+// Determine if a hex color is light (for readable text)
+function isLightColor(hex){
+  if(!hex||hex==='#ffffff'||hex==='#fff') return true;
+  const h=hex.replace('#','');
+  if(h.length<6) return true;
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return (r*299+g*587+b*114)/1000 > 140;
+}
+
 function _applyRefresh(sheets){
   if(!sheets) return;
   sheets.forEach(sh=>{
     if(S.sheets[sh.name]){
-      S.sheets[sh.name].rows=sh.rows.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+      const allRows=sh.rows.slice(1);
+      const allColors=(sh.colors||[]).slice(1);
+      const rows=allRows.filter((r)=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+      const colors=allRows.reduce((acc,r,i)=>{
+        if(r.some(c=>c!==''&&c!==null&&c!==undefined)) acc.push(allColors[i]||'#ffffff');
+        return acc;
+      },[]);
+      S.sheets[sh.name].rows=rows;
+      S.sheets[sh.name].colors=colors;
     }
   });
 }
