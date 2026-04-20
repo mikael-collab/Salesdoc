@@ -329,7 +329,8 @@ const $  = id => document.getElementById(id);
 const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function today(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function isReceiptSheet(name){ return /קבל/.test(name); }
-function isInvSheet(name){ return /חשבוני/.test(name) && !isReceiptSheet(name) && !name.includes('לקוח'); }
+function isReceiptOnly(name){ return /קבל/.test(name) && !/חשבוני/.test(name); } // קבלות — no items
+function isInvSheet(name){ return /חשבוני/.test(name) && !name.includes('לקוח'); } // includes חשבונית/קבלה
 function sheetIcon(name){ if(name.includes('לקוח'))return'👥'; if(name.includes('קבל'))return'🧾'; return'📋'; }
 
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $('s-'+id).classList.add('active'); }
@@ -419,7 +420,7 @@ function setTopBar(view){
     add.classList.remove('hidden'); save.classList.remove('visible'); nav.style.display='flex';
   } else {
     back.classList.add('visible');
-    const formTitle = isReceiptSheet(S.tab) ? 'קבלה חדשה' : (isInvSheet(S.tab) ? 'חשבונית חדשה' : 'לקוח חדש');
+    const formTitle = isReceiptOnly(S.tab) ? 'קבלה חדשה' : (isReceiptSheet(S.tab) ? 'חשבונית/קבלה חדשה' : isInvSheet(S.tab) ? 'חשבונית חדשה' : 'לקוח חדש');
     title.textContent = formTitle;
     meta.textContent=''; add.classList.add('hidden'); save.classList.add('visible'); nav.style.display='none';
   }
@@ -511,10 +512,9 @@ function copyVal(ri,val){
 function showForm(){
   S.view='form'; S.skuQtys=new Array(11).fill(0); S.formVals={};
   setTopBar('form');
-  const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
-  const headers=S.sheets[S.tab]?.headers||[];
-  S.skuFullNames=SKUS.map(s=>s.full);  // use our known names
-  if(isInv) renderInvoiceForm();
+  S.skuFullNames=SKUS.map(s=>s.full);
+  if(isReceiptOnly(S.tab))  renderReceiptOnlyForm();
+  else if(isInvSheet(S.tab)) renderInvoiceForm();
   else renderCustomerForm();
 }
 function navBack(){
@@ -528,6 +528,80 @@ function navBack(){
 }
 
 // ── Customer form — lookup by ID, fields locked until ID entered
+// ── Receipt-only form (קבלות) — references existing invoice, no items/SKUs
+function renderReceiptOnlyForm(){
+  const content=$('content');
+  let html=`
+    <div class="form-scroll">
+      <div class="fsec">
+        <div class="fsec-title">פרטי קבלה</div>
+        <div class="fgrp">
+          <label class="flabel">ת"ז / ח"פ לקוח</label>
+          <input type="text" id="inv-id" placeholder="הזן ת''ז / ח''פ"
+            oninput="S.formVals['id']=this.value" onblur="lookupCustomer(this.value,true)">
+          <div class="customer-found" id="inv-cust-name"></div>
+          <div class="input-hint">הזן ת''ז — שם הלקוח יתמלא אוטומטית</div>
+        </div>
+        <div class="fgrp">
+          <label class="flabel">מספר חשבונית מקורית <span style="color:var(--red)">*</span></label>
+          <input type="text" id="rec-invnum" class="inv-field" disabled placeholder="מספר החשבונית שמשולמת"
+            oninput="S.formVals['invRef']=this.value">
+        </div>
+        <div class="fgrp">
+          <label class="flabel">סכום לתשלום <span style="color:var(--red)">*</span></label>
+          <input type="number" id="rec-amount" class="inv-field" disabled placeholder="0.00"
+            oninput="S.formVals['amount']=this.value">
+        </div>
+        <div class="fgrp">
+          <label class="flabel">תאריך</label>
+          <input type="date" id="inv-date" class="inv-field" disabled value="${today()}"
+            oninput="S.formVals['date']=this.value">
+        </div>
+      </div>
+
+      <div class="fsec">
+        <div class="fsec-title">אמצעי תשלום</div>
+        <div class="pay-options">
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-cash"     value="מזומן" onchange="onPayChange(this.value)"><label for="pay-cash">💵 מזומן</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-check"    value="שיק"   onchange="onPayChange(this.value)"><label for="pay-check">📝 שיק</label></div>
+          <div class="pay-opt"><input type="radio" name="pay" id="pay-transfer" value="העברה" onchange="onPayChange(this.value)"><label for="pay-transfer">🏦 העברה</label></div>
+        </div>
+        <div id="check-fields" style="display:none;margin-top:10px">
+          <div class="fgrp">
+            <label class="flabel">מספר שיק <span style="color:var(--red)">*</span></label>
+            <input type="text" id="check-num" class="inv-field" placeholder="מספר השיק" oninput="S.formVals['checkNum']=this.value">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">תאריך פרעון שיק <span style="color:var(--red)">*</span></label>
+            <input type="date" id="check-date" class="inv-field" oninput="S.formVals['checkDate']=this.value">
+          </div>
+          <div class="fgrp">
+            <label class="flabel">צילום שיק <span style="color:var(--red)">*</span></label>
+            <div class="photo-wrap">
+              <label class="photo-btn" for="check-photo">
+                <span id="photo-icon">📷</span>
+                <span id="photo-label">צלם / בחר תמונה</span>
+              </label>
+              <input type="file" id="check-photo" accept="image/*" capture="environment"
+                style="display:none" onchange="onCheckPhoto(this)">
+              <img id="check-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;border:1px solid var(--border);">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fsec" style="padding-bottom:14px">
+        <div class="fsec-title">הערות</div>
+        <div class="fgrp">
+          <textarea id="inv-notes" class="inv-field" disabled placeholder="הערות לקבלה…"
+            oninput="S.formVals['notes']=this.value"></textarea>
+        </div>
+      </div>
+    </div>`;
+  content.innerHTML=html;
+  S.formVals['date']=today();
+}
+
 // ── Customer form — all fields enabled, first 4 mandatory, ID uniqueness checked on blur
 function renderCustomerForm(){
   const headers=S.sheets[S.tab]?.headers||[];
@@ -877,10 +951,57 @@ function updateCalcFields(){
 // ── Submit
 async function submitForm(){
   const sh=S.sheets[S.tab]; if(!sh)return;
-  const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
-  const isReceipt=isReceiptSheet(S.tab);
+  const isRecOnly=isReceiptOnly(S.tab);
+  const isInv=isInvSheet(S.tab);
+  const isReceipt=isReceiptSheet(S.tab)&&!isRecOnly;
 
-  // Validate check payment mandatory fields
+  const fmtDate=(d)=>{
+    if(!d) return today().split('-').reverse().join('/');
+    if(d.includes('/')) return d;
+    const p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d;
+  };
+
+  // ── Receipt-only save (קבלות)
+  if(isRecOnly){
+    if(!S.formVals['id'])    {alert('נא להזין ת"ז / ח"פ');return;}
+    if(!S.formVals['invRef']){alert('נא להזין מספר חשבונית מקורית');return;}
+    if(!S.formVals['amount']){alert('נא להזין סכום לתשלום');return;}
+    if(S.formVals['pay']==='שיק'){
+      if(!S.formVals['checkNum']) {alert('נא להזין מספר שיק');return;}
+      if(!S.formVals['checkDate']){alert('נא להזין תאריך פרעון שיק');return;}
+      if(!S.formVals['checkPhoto']){alert('נא לצלם את השיק');return;}
+    }
+    const saveBtn=$('tb-save'); saveBtn.textContent='שומר…'; saveBtn.disabled=true;
+    const headers=sh.headers;
+    const vals={};
+    const put=(patterns,value)=>{
+      if(!value&&value!==0)return;
+      headers.forEach((h,i)=>{if(patterns.some(p=>h.includes(p)))vals[i]=value;});
+    };
+    put(['ת"ז','ח"פ'],               S.formVals['id']);
+    put(['שם לקוח','שם הלקוח'],      S.formVals['custName']||'');
+    put(['מספר חשבונית','חשבונית'],  S.formVals['invRef']);
+    put(['סכום'],                     S.formVals['amount']);
+    put(['תאריך'],                    fmtDate(S.formVals['date']));
+    put(['אמצעי תשלום'],             S.formVals['pay']||'');
+    put(['מספר שיק'],                S.formVals['checkNum']||'');
+    put(['תאריך פרעון','תאריך תשלום'], fmtDate(S.formVals['checkDate']||''));
+    put(['צילום שיק'],               S.formVals['checkPhoto']?'צולם':'');
+    put(['הערות'],                   S.formVals['notes']||'');
+    const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
+    const row=new Array(Math.max(headers.length,10)).fill('');
+    nonEmpty.forEach(([ci,v])=>{row[parseInt(ci)]=v;});
+    if(S.isDemo){sh.rows.push(row);navBack();saveBtn.textContent='שמור ✓';saveBtn.disabled=false;return;}
+    try{
+      const data=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
+      if(!data.ok)throw new Error(data.error);
+      await refreshSheets(); navBack();
+    }catch(e){alert('שגיאה בשמירה: '+e.message);}
+    finally{saveBtn.textContent='שמור ✓';saveBtn.disabled=false;}
+    return;
+  }
+
+  // Validate check payment mandatory fields (invoice+receipt)
   if(isReceipt && S.formVals['pay']==='שיק'){
     if(!S.formVals['checkNum'])  {alert('נא להזין מספר שיק');return;}
     if(!S.formVals['checkDate']) {alert('נא להזין תאריך פרעון שיק');return;}
