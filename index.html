@@ -223,7 +223,22 @@ function handleWrite(ss, p) {
   try {
     var sh = ss.getSheetByName(p.sheet);
     if (!sh) throw new Error('Sheet not found: ' + p.sheet);
-    if (p.action === 'writeSparseRow') {
+    if (p.action === 'writeAfterLastFilled') {
+      // Find last row where keyCol has a value, write to the next empty row after it
+      var data = sh.getDataRange().getValues();
+      var lastFilled = 1; // default: row 2 (after header)
+      for (var r = 1; r < data.length; r++) {
+        var cell = data[r][p.keyCol];
+        if (cell !== '' && cell !== null && cell !== undefined) {
+          lastFilled = r + 1; // 1-indexed
+        }
+      }
+      var targetRow = lastFilled + 1;
+      p.cells.forEach(function(c) {
+        sh.getRange(targetRow, c.col + 1).setValue(c.val);
+      });
+
+    } else if (p.action === 'writeSparseRow') {
       var data = sh.getDataRange().getValues();
       var keyCol = typeof p.keyCol === 'number' ? p.keyCol : 1;
       var targetRow = -1;
@@ -719,7 +734,7 @@ function lookupInvoice(invNum){
     const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
     if(custSh){
       const cm=custSh.rows.find(r=>String(r[1]||'').trim()===idVal);
-      if(cm) resolvedName=String(cm[0]||'');
+      if(cm) resolvedName=String(cm[2]||cm[0]||''); // col 2 = שם העסק, fallback to שם לקוח
     }
 
     if(idEl)  {idEl.value=idVal;idEl.style.color='';}
@@ -1112,23 +1127,36 @@ async function submitForm(){
       if(!value&&value!==0)return;
       headers.forEach((h,i)=>{if(patterns.some(p=>h.includes(p)))vals[i]=value;});
     };
-    put(['ת"ז','ח"פ'],               S.formVals['id']);
-    put(['שם לקוח','שם הלקוח'],      S.formVals['custName']||'');
-    put(['מספר חשבונית','חשבונית'],  S.formVals['invRef']);
-    put(['סכום'],                     S.formVals['amount']);
-    put(['תאריך'],                    fmtDate(S.formVals['date']));
-    put(['אמצעי תשלום'],             S.formVals['pay']||'');
-    put(['מספר שיק'],                S.formVals['checkNum']||'');
-    put(['תאריך פרעון','תאריך תשלום'], fmtDate(S.formVals['checkDate']||''));
-    put(['צילום שיק'],               S.formVals['checkPhoto']?'צולם':'');
-    put(['הערות'],                   S.formVals['notes']||'');
+    put(['ת"ז','ח"פ'],                              S.formVals['id']);
+    put(['שם לקוח','שם הלקוח','שם העסק','עסק'],   S.formVals['custName']||'');
+    put(['מספר חשבונית','חשבונית'],                S.formVals['invRef']);
+    put(['סכום'],                                   S.formVals['amount']);
+    put(['תאריך'],                                  fmtDate(S.formVals['date']));
+    put(['אמצעי תשלום','סוג תשלום','סוג'],         S.formVals['pay']||'');
+    put(['מספר שיק'],                               S.formVals['checkNum']||'');
+    put(['תאריך פרעון','תאריך תשלום'],             fmtDate(S.formVals['checkDate']||''));
+    put(['צילום שיק'],                              S.formVals['checkPhoto']?'צולם':'');
+    put(['הערות'],                                  S.formVals['notes']||'');
     const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
     const row=new Array(Math.max(headers.length,10)).fill('');
     nonEmpty.forEach(([ci,v])=>{row[parseInt(ci)]=v;});
     if(S.isDemo){sh.rows.push(row);navBack();saveBtn.textContent='שמור ✓';saveBtn.disabled=false;return;}
     try{
-      const data=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
-      if(!data.ok)throw new Error(data.error);
+      // Find the מספר חשבונית column in the קבלה sheet to locate last filled row
+      const invNumCol=headers.findIndex(h=>/מספר/.test(h)&&!/שיק/.test(h));
+      const cells=nonEmpty.map(([ci,v])=>({col:parseInt(ci),val:v}));
+
+      const data=await xhrPost(S.scriptUrl,{
+        action:'writeAfterLastFilled',
+        sheet:S.tab,
+        keyCol:invNumCol>=0?invNumCol:0,
+        cells
+      });
+      // Fallback to append if old script
+      if(!data.ok){
+        const data2=await xhrPost(S.scriptUrl,{action:'append',sheet:S.tab,row});
+        if(!data2.ok)throw new Error(data2.error);
+      }
       await refreshSheets(); navBack();
     }catch(e){alert('שגיאה בשמירה: '+e.message);}
     finally{saveBtn.textContent='שמור ✓';saveBtn.disabled=false;}
