@@ -463,23 +463,54 @@ function renderListItems(){
   if(!filtered.length){
     html=`<div class="empty"><div class="empty-icon">🔎</div><div>לא נמצאו רשומות</div></div>`;
   } else {
+    const headers=sh?.headers||[];
+    // Find key column indices for invoice sheets
+    const isInv=isInvSheet(S.tab)||isReceiptSheet(S.tab);
+    const colA=0; // invoice number
+    const dateCol=headers.findIndex(h=>/תאריך/.test(h)&&!/פרעון|תשלום/.test(h));
+    const vatCol29=29, vatCol30=30; // VAT total column (AD or AE)
+
     filtered.forEach(row=>{
       const ri=rows.indexOf(row);
       const isExp=S.expanded===ri;
       const bgColor=sh?.colors?.[ri]||'#ffffff';
       const isWhite=bgColor==='#ffffff'||bgColor==='#fff'||bgColor==null;
       const rowStyle=isWhite?'':'background:'+bgColor+';';
-      // Compute readable text color from background
       const textDark=isWhite||isLightColor(bgColor);
+      const tc=textDark?'':'color:#fff;';
+      const tc2=textDark?'':'color:rgba(255,255,255,.8);';
+      const tc3=textDark?'':'color:rgba(255,255,255,.7);';
+
+      let r1, r2, r3, copyValue, copyLabel;
+      if(isInv){
+        // Invoice/receipt: show invoice#, VAT total, formatted date
+        const invNum  = String(row[colA]||'');
+        const rawDate = dateCol>=0 ? row[dateCol] : '';
+        const dateStr = formatDateDisplay(rawDate);
+        const vatTotal= row[vatCol30]||row[vatCol29]||'';
+        r1 = invNum ? `מס' ${esc(invNum)}` : '—';
+        r2 = vatTotal ? `סה"כ: ₪${esc(String(Math.round(vatTotal)))}` : '';
+        r3 = dateStr;
+        copyValue = invNum;
+        copyLabel = '📋';
+      } else {
+        // Customers: show name, ID, business
+        r1 = esc(row[0]||'');
+        r2 = row[1] ? esc(String(row[1])) : '';
+        r3 = row[2] ? esc(String(row[2])) : '';
+        copyValue = String(row[1]||'');
+        copyLabel = '📋';
+      }
+
       html+=`<div class="list-item" style="${rowStyle}">
         <div class="li-main">
           <div class="li-info">
-            <div class="li-r1" style="${textDark?'':'color:#fff'}">${esc(row[0])}</div>
-            ${row[1]?`<div class="li-r2" style="${textDark?'':'color:rgba(255,255,255,.8)'}">${esc(row[1])}</div>`:''}
-            ${row[2]?`<div class="li-r3" style="${textDark?'':'color:rgba(255,255,255,.7)'}">${esc(row[2])}</div>`:''}
+            <div class="li-r1" style="${tc}font-weight:700">${r1}</div>
+            ${r2?`<div class="li-r2" style="${tc2}">${r2}</div>`:''}
+            ${r3?`<div class="li-r3" style="${tc3}">${r3}</div>`:''}
           </div>
           <div class="li-btns">
-            <div class="icon-btn" id="cp-${ri}" onclick="copyVal(${ri},'${esc(String(row[1]||''))}')">📋</div>
+            <div class="icon-btn" id="cp-${ri}" title="העתק" onclick="copyVal(${ri},'${esc(copyValue)}')">${copyLabel}</div>
             <div class="chev${isExp?' open':''}" onclick="toggleExp(${ri})">${isExp?'▲':'▼'}</div>
           </div>
         </div>`;
@@ -598,28 +629,56 @@ function renderReceiptOnlyForm(){
   S.formVals['date']=today();
 }
 
-// Look up customer details from חשבוניות sheet by invoice number
+// Format a date value from sheet (Date object, ISO string, or dd/mm/yyyy) → dd/MM/yyyy display
+function formatDateDisplay(v){
+  if(!v) return '';
+  if(v instanceof Date) {
+    const d=v;
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  }
+  const s=String(v).trim();
+  if(!s||s==='0'||s==='false') return '';
+  // Already dd/mm/yyyy
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) return s;
+  // yyyy-mm-dd
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) { const p=s.slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  return s;
+}
+
+// Look up customer details from any invoice sheet by invoice number
 function lookupInvoice(invNum){
   invNum=(invNum||'').trim();
   if(!invNum) return;
-  // Search חשבוניות sheet for matching invoice number (col A)
-  const invSheet=S.sheets['חשבוניות'];
-  if(!invSheet) return;
-  const match=invSheet.rows.find(r=>String(r[0]||'').trim()===invNum);
+  // Search all invoice-like sheets (not receipt-only, not customers)
+  const invSheetName=S.sheetNames.find(n=>isInvSheet(n));
+  const invSheet=invSheetName?S.sheets[invSheetName]:null;
+  if(!invSheet){ alert('לא נמצא גיליון חשבוניות'); return; }
+
+  // Match loosely — compare as strings, trim, allow numeric match
+  const match=invSheet.rows.find(r=>{
+    const v=String(r[0]||'').trim();
+    return v===invNum || v===String(parseInt(invNum)) || parseInt(v)===parseInt(invNum);
+  });
+
+  const idEl=$('rec-id'), nameEl=$('rec-name');
   if(match){
-    const id=$('rec-id'), name=$('rec-name');
-    if(id)  id.value  = match[1]||''; // ת"ז is col B
-    if(name) name.value= match[2]||''; // שם לקוח — adjust col if needed
-    S.formVals['id']      = match[1]||'';
-    S.formVals['custName']= match[2]||'';
-    // Enable the rest of the fields
+    // Find ID column (ת"ז / ח"פ) and name column by header
+    const headers=invSheet.headers;
+    const idCol  =headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
+    const nameCol=headers.findIndex(h=>/שם לקוח|שם הלקוח/.test(h));
+    const idVal  =idCol  >=0 ? String(match[idCol]  ||'') : String(match[1]||'');
+    const nameVal=nameCol>=0 ? String(match[nameCol]||'') : '';
+
+    if(idEl)  {idEl.value=idVal;   idEl.style.color='';}
+    if(nameEl) nameEl.value=nameVal;
+    S.formVals['id']      =idVal;
+    S.formVals['custName']=nameVal;
     document.querySelectorAll('.rec-field').forEach(el=>el.disabled=false);
   } else {
-    // Invoice not found — clear and show hint
-    const id=$('rec-id'), name=$('rec-name');
-    if(id)   id.value='לא נמצא';
-    if(name) name.value='';
+    if(idEl)  {idEl.value='לא נמצא';idEl.style.color='var(--red)';}
+    if(nameEl) nameEl.value='';
     document.querySelectorAll('.rec-field').forEach(el=>el.disabled=true);
+    alert('חשבונית מספר '+invNum+' לא נמצאה');
   }
 }
 
