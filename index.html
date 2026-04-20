@@ -1179,11 +1179,11 @@ async function submitForm(){
         if(!data2.ok)throw new Error(data2.error);
       }
 
-      // Send check photo as actual image to sheet if taken
+      // Send check photo — use direct POST (base64 too large for GET URL)
       if(S.formVals['checkPhoto']){
         const photoCol=headers.findIndex(h=>/צילום שיק|תמונת שיק/.test(h));
         if(photoCol>=0){
-          await xhrPost(S.scriptUrl,{
+          await xhrPostDirect(S.scriptUrl,{
             action:'insertImage',
             sheet:S.tab,
             keyCol:invNumCol>=0?invNumCol:0,
@@ -1367,6 +1367,22 @@ function xhrGet(url){
 function xhrPost(url,payload){
   const encoded=encodeURIComponent(JSON.stringify(payload));
   return xhrGet(url+'?data='+encoded);
+}
+
+// Direct POST — for large payloads (e.g. base64 images) that are too big for URL params
+function xhrPostDirect(url,payload){
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',url,true);
+    xhr.timeout=60000; // 60s for image upload
+    xhr.onload=()=>{
+      try{resolve(JSON.parse(xhr.responseText));}
+      catch{resolve({ok:true});} // image insert may return non-JSON
+    };
+    xhr.onerror  =()=>reject(new Error('Network error — check internet and script URL'));
+    xhr.ontimeout=()=>reject(new Error('Timeout — image too large or slow connection'));
+    xhr.send(JSON.stringify(payload));
+  });
 }
 
 async function refreshSheets(){
