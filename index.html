@@ -111,7 +111,7 @@ details summary{font-size:13px;color:var(--gray);cursor:pointer;font-weight:600;
 .empty-icon{font-size:38px;}
 
 /* ── FORM VIEW ── */
-.total-bar{background:var(--dark);display:flex;align-items:center;justify-content:center;padding:10px 16px;flex-shrink:0;}
+.total-bar{background:var(--dark);display:flex;align-items:center;justify-content:space-around;padding:10px 16px;flex-shrink:0;gap:8px;}
 .total-inner{text-align:center;}
 .total-lbl{font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;}
 .total-val{font-size:32px;font-weight:700;color:var(--amber);line-height:1;}
@@ -908,10 +908,15 @@ function renderInvoiceForm(){
   headers.forEach((h,i)=>{ if(i>=26 && h) extraFields.push({h,i}); });
 
   let html=`
-    <div class="total-bar">
-      <div class="total-inner">
-        <div class="total-lbl">סה״כ יחידות בהזמנה</div>
+    <div class="total-bar" style="justify-content:space-around;">
+      <div class="total-inner" style="text-align:center;">
+        <div class="total-lbl">סה״כ יחידות</div>
         <div class="total-val" id="total-units">0</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,.15);align-self:stretch;"></div>
+      <div class="total-inner" style="text-align:center;">
+        <div class="total-lbl">סה״כ כולל מע״מ</div>
+        <div class="total-val" id="total-vat-display">₪0</div>
       </div>
     </div>
     <div class="form-scroll">
@@ -1131,7 +1136,11 @@ function updateCalcFields(){
   set('extra-26', gross || '');
   set('extra-27', discPct ? discPct+'%' : '');
   set('extra-28', net || '');
-  set('extra-'+vatCol(), withVat || ''); // correct column per sheet type
+  set('extra-'+vatCol(), withVat || '');
+
+  // Update the sticky header VAT display
+  const vatDisp=$('total-vat-display');
+  if(vatDisp) vatDisp.textContent = withVat ? '₪'+withVat : '₪0'; // correct column per sheet type
 
   // Only store gross/net for potential display — VAT total intentionally excluded from formVals
   S.formVals['_aa']=gross;
