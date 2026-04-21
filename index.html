@@ -533,7 +533,10 @@ function renderListItems(){
     const custSh=S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
     if(custSh) custSh.rows.forEach(r=>{
       const id=String(r[1]||'').trim();
-      if(id) custMap[id]={name:String(r[0]||''),biz:String(r[2]||'')};
+      if(id) custMap[id]={
+        name:String(r[0]||''),   // col A = שם לקוח
+        biz: String(r[2]||'')    // col C = שם העסק
+      };
     });
 
     // Find columns by header name
@@ -566,8 +569,9 @@ function renderListItems(){
 
         // Line 1: ת"ז · שם העסק
         r1 = [esc(idVal), esc(biz)].filter(Boolean).join(' · ');
-        // Line 2: date · VAT
-        r2 = [dateStr, vatStr].filter(Boolean).join('   ');
+        // Line 2: date · סה"כ incl VAT
+        const vatLabel = vatStr ? 'סה"כ כולל מע"מ: '+vatStr : '';
+        r2 = [dateStr, vatLabel].filter(Boolean).join('   ');
 
         html+=`<div class="list-item" style="${rowStyle}">
           <div class="li-main">
@@ -840,40 +844,32 @@ function checkCustomerId(val){
 function lookupCustomer(idVal, isInvoice){
   idVal=(idVal||'').trim();
   if(!idVal) return;
-  // Search לקוחות sheet
-  const custSheet=S.sheets['לקוחות'];
+  const custSheet=S.sheets['לקוחות']||S.sheets[S.sheetNames.find(n=>n.includes('לקוח'))];
   if(!custSheet) return;
-  const match=custSheet.rows.find(r=>String(r[1]||'').trim()===idVal);
+  // Match by ת"ז column (col 1), support leading-zero mismatch via numeric compare
+  const match=custSheet.rows.find(r=>{
+    const v=String(r[1]||'').trim();
+    return v===idVal||Number(v)===Number(idVal);
+  });
+  const bizName = match ? String(match[2]||match[0]||'') : ''; // col 2 = שם העסק
   if(isInvoice){
     const lbl=$('inv-cust-name');
     if(match){
-      if(lbl){lbl.textContent=match[0]||'';lbl.style.color='#166534';lbl.style.display='block';}
-      S.formVals['custName']=match[0]||'';
-      // Also silently populate any hidden "שם לקוח" columns in the sheet
-      const sh=S.sheets[S.tab];
-      if(sh) sh.headers.forEach((h,i)=>{
-        if(['שם לקוח','שם הלקוח','לקוח','שם'].includes(h.trim())){
-          S.formVals['extra'+i]=match[0]||'';
-        }
-      });
+      if(lbl){lbl.textContent=bizName;lbl.style.color='#166534';lbl.style.display='block';}
+      S.formVals['custName']=bizName;
       enableInvoiceFields(true);
     } else {
       if(lbl){lbl.textContent='לקוח לא נמצא';lbl.style.color='var(--red)';lbl.style.display='block';}
       enableInvoiceFields(false);
     }
   } else {
-    // Customer form — auto-fill fields if existing customer found, but fields stay enabled either way
     if(match){
       const nameInp=$('cf-0');
       if(nameInp&&!nameInp.value){nameInp.value=match[0]||'';S.formVals[0]=match[0]||'';}
-      const found=$('cust-found');
-      if(found){found.textContent='✓ לקוח קיים: '+match[0];found.style.display='block';}
       match.forEach((v,i)=>{
         const el=$('cf-'+i);
         if(el&&i!==0&&i!==1&&!el.value){el.value=v||'';S.formVals[i]=v||'';}
       });
-    } else {
-      const found=$('cust-found'); if(found)found.style.display='none';
     }
   }
 }
@@ -1301,8 +1297,8 @@ async function submitForm(){
       if(!S.scriptUrl) throw new Error('Script URL not configured');
 
       const nonEmpty=Object.entries(vals).filter(([,v])=>v!==''&&v!==null&&v!==undefined);
-      const keyHeader = isReceipt ? ['מספר','קבלה'] : ['ת"ז','ח"פ'];
-      const keyColIdx = headers.findIndex(h=>keyHeader.some(p=>h.includes(p)));
+      // Both invoice sheet types use ת"ז as the key for finding the first empty row
+      const keyColIdx = headers.findIndex(h=>/ת.ז|ח.פ/.test(h));
       const cells = nonEmpty.map(([ci,v])=>({col:parseInt(ci), val:v}));
 
       // Always use writeSparseRow — writes ONLY specified cells into first empty row
