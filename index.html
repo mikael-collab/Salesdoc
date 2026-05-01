@@ -198,7 +198,7 @@ const CFG = {
    STATE
 ───────────────────────────────────────────── */
 const S = {
-  screen: (CFG.CLIENT_ID && CFG.SHEET_ID) ? 'init' : 'setup',
+  screen: 'setup',
   invoices: [],
   customers: [],
   currentInv: null,
@@ -231,13 +231,18 @@ function initTokenClient() {
     client_id: CFG.CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/spreadsheets',
     callback: (r) => {
-      if (r.error) { toast('שגיאת אימות: ' + r.error, 'err'); go('setup'); return; }
+      if (r.error) {
+        assign({ saving: false, loading: false });
+        toast('שגיאת אימות: ' + r.error, 'err');
+        go('setup');
+        return;
+      }
       S.token = r.access_token;
       S.tokenExp = Date.now() + (r.expires_in || 3600) * 1000 - 60000;
       loadData();
     }
   });
-  if (S.screen === 'init') auth();
+  // Never auto-login — wait for user to press button
 }
 
 function auth() {
@@ -246,7 +251,8 @@ function auth() {
     else { toast('טוען ספריות Google...'); setTimeout(auth, 800); }
     return;
   }
-  tokenClient.requestAccessToken({ prompt: S.token ? '' : 'consent' });
+  // Always show the account picker so user can choose between accounts
+  tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 /* ─────────────────────────────────────────────
@@ -483,26 +489,49 @@ function afterRender() {
    SCREENS
 ───────────────────────────────────────────── */
 function rSetup() {
+  const here = location.origin || 'http://localhost';
   return `<div class="login-wrap">
     <div class="login-icon">📄</div>
     <div class="login-title">מנהל חשבוניות</div>
-    <div class="login-sub">חבר לגיליון Google שלך</div>
+    <div class="login-sub">הגדרה ראשונית — עשה זאת פעם אחת</div>
     <div class="login-card">
-      <div class="step-group">
-        <div class="step-lbl"><div class="step-n">1</div>מזהה לקוח Google</div>
-        <input class="finp" id="scid" value="${esc(CFG.CLIENT_ID)}" placeholder="xxxx.apps.googleusercontent.com" style="direction:ltr;font-size:12px">
-        <div class="step-hint">Google Cloud Console → APIs → OAuth 2.0 Client IDs</div>
+
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:11px 13px;margin-bottom:16px;font-size:12px;color:#7a5800;line-height:1.6">
+        <strong>שגיאת "OAuth client wasn't found"?</strong><br>
+        וודא שב-Google Cloud Console:<br>
+        • סוג האפליקציה = <strong>Web application</strong><br>
+        • ב-"Authorized JavaScript origins" הוסף:<br>
+        <code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:11px;direction:ltr;display:inline-block;margin-top:3px">${esc(here)}</code>
       </div>
+
       <div class="step-group">
-        <div class="step-lbl"><div class="step-n">2</div>מזהה גיליון Sheets</div>
-        <input class="finp" id="ssid" value="${esc(CFG.SHEET_ID)}" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..." style="direction:ltr;font-size:12px">
-        <div class="step-hint">מה-URL של הגיליון: /spreadsheets/d/<b>ID</b>/</div>
+        <div class="step-lbl"><div class="step-n">1</div>Google Cloud Console</div>
+        <div class="step-hint" style="margin-bottom:8px">
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--primary);font-weight:700">פתח את Credentials ←</a>
+          &nbsp;→ צור OAuth 2.0 Client ID → Web application
+        </div>
       </div>
+
+      <div class="step-group">
+        <div class="step-lbl"><div class="step-n">2</div>Client ID</div>
+        <input class="finp" id="scid" value="${esc(CFG.CLIENT_ID)}" placeholder="xxxxxx.apps.googleusercontent.com" style="direction:ltr;font-size:12px" autocomplete="off" autocorrect="off" spellcheck="false">
+        <div class="step-hint">מסתיים תמיד ב: .apps.googleusercontent.com</div>
+      </div>
+
+      <div class="step-group">
+        <div class="step-lbl"><div class="step-n">3</div>Sheet ID</div>
+        <input class="finp" id="ssid" value="${esc(CFG.SHEET_ID)}" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..." style="direction:ltr;font-size:12px" autocomplete="off" autocorrect="off" spellcheck="false">
+        <div class="step-hint">מה-URL של הגיליון: /spreadsheets/d/<strong>ID</strong>/edit</div>
+      </div>
+
       <div class="step-group" style="margin-bottom:20px">
-        <div class="step-lbl"><div class="step-n">3</div>שם הגיליון (Tab)</div>
+        <div class="step-lbl"><div class="step-n">4</div>שם הגיליון (Tab)</div>
         <input class="finp" id="stab" value="${esc(CFG.TAB_NAME)}" placeholder="חשבוניות">
+        <div class="step-hint">שם הלשונית בתחתית הגיליון (ברירת מחדל: חשבוניות)</div>
       </div>
+
       <button class="btn-p" onclick="doSetup()">חבר לגיליון ←</button>
+      ${(CFG.CLIENT_ID||CFG.SHEET_ID) ? `<button class="btn-s" style="margin-top:10px" onclick="clearSaved()">🗑 נקה הגדרות שמורות</button>` : ''}
     </div>
   </div>`;
 }
@@ -802,6 +831,13 @@ function ico(n) {
 /* ─────────────────────────────────────────────
    HANDLERS
 ───────────────────────────────────────────── */
+function clearSaved() {
+  localStorage.clear(); sessionStorage.clear();
+  CFG.CLIENT_ID = ''; CFG.SHEET_ID = ''; CFG.TAB_NAME = 'חשבוניות';
+  S.token = null; S.tokenExp = 0; tokenClient = null;
+  render();
+}
+
 function doSetup() {
   const cid = document.getElementById('scid').value.trim();
   const sid = document.getElementById('ssid').value.trim();
