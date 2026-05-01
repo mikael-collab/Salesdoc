@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f4c8a">
 <title>מנהל חשבוניות</title>
-<script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -218,30 +217,23 @@ const S = {
 let FORM = {};
 let dlgOk = null, dlgCancel = null;
 let filteredCusts = [];
-let gapiOk = false, gisOk = false;
 let tokenClient = null;
 
 /* ─────────────────────────────────────────────
-   GOOGLE API
+   GOOGLE AUTH (GIS only — no gapi dependency)
 ───────────────────────────────────────────── */
-function gapiLoaded() {
-  gapi.load('client', async () => {
-    await gapi.client.init({ discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'] });
-    gapiOk = true; maybeInit();
-  });
+function gisLoaded() {
+  if (CFG.CLIENT_ID) initTokenClient();
 }
-function gisLoaded() { gisOk = true; maybeInit(); }
 
-function maybeInit() {
-  if (!gapiOk || !gisOk || !CFG.CLIENT_ID) return;
+function initTokenClient() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CFG.CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/spreadsheets',
     callback: (r) => {
       if (r.error) { toast('שגיאת אימות: ' + r.error, 'err'); go('setup'); return; }
       S.token = r.access_token;
-      S.tokenExp = Date.now() + r.expires_in * 1000 - 60000;
-      gapi.client.setToken({ access_token: r.access_token });
+      S.tokenExp = Date.now() + (r.expires_in || 3600) * 1000 - 60000;
       loadData();
     }
   });
@@ -249,23 +241,44 @@ function maybeInit() {
 }
 
 function auth() {
-  if (!tokenClient) { toast('טוען ספריות Google...'); return; }
+  if (!tokenClient) {
+    if (typeof google !== 'undefined') initTokenClient();
+    else { toast('טוען ספריות Google...'); setTimeout(auth, 800); }
+    return;
+  }
   tokenClient.requestAccessToken({ prompt: S.token ? '' : 'consent' });
 }
 
 /* ─────────────────────────────────────────────
-   SHEETS API (optimized)
+   SHEETS REST API — direct fetch (no gapi)
 ───────────────────────────────────────────── */
-let cache = null; // in-memory cache
+const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+function sheetHeaders() {
+  return { 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json' };
+}
+
+async function sheetsGet(range) {
+  const url = `${SHEETS}/${encodeURIComponent(CFG.SHEET_ID)}/values/${encodeURIComponent(range)}?valueRenderOption=UNFORMATTED_VALUE`;
+  const r = await fetch(url, { headers: sheetHeaders() });
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.statusText); }
+  return r.json();
+}
+
+async function sheetsAppend(range, values) {
+  const url = `${SHEETS}/${encodeURIComponent(CFG.SHEET_ID)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const r = await fetch(url, { method:'POST', headers: sheetHeaders(), body: JSON.stringify({ values }) });
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.statusText); }
+  return r.json();
+}
 
 async function loadData(showLoad = true) {
   if (showLoad) go('loading');
-  // Try session cache first for speed
   const sc = sessionStorage.getItem('ivcache');
-  if (sc && !showLoad) {
+  if (sc) {
     try {
       const { ts, inv, cust } = JSON.parse(sc);
-      if (Date.now() - ts < 300000) { // 5min cache
+      if (Date.now() - ts < 300000) {
         assign({ invoices: inv, customers: cust, loading: false });
         go('home'); return;
       }
@@ -273,17 +286,12 @@ async function loadData(showLoad = true) {
   }
   assign({ loading: true });
   try {
-    const r = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: CFG.SHEET_ID,
-      range: `${CFG.TAB_NAME}!A:T`,
-      valueRenderOption: 'UNFORMATTED_VALUE'
-    });
-    const rows = (r.result.values || []).slice(1); // skip header
-    cache = rows;
+    const data = await sheetsGet(`${CFG.TAB_NAME}!A:T`);
+    const rows = (data.values || []).slice(1);
     const inv = rows.filter(r => r[0]).map(parseRow).reverse();
     const custMap = new Map();
     rows.forEach(r => {
-      const k = (r[CFG.C.BIZ]||'') + (r[CFG.C.ID]||'');
+      const k = (r[CFG.C.BIZ]||'') + '|' + (r[CFG.C.ID]||'');
       if ((r[CFG.C.BIZ]||'') && !custMap.has(k))
         custMap.set(k, { name:r[CFG.C.BIZ]||'', id:r[CFG.C.ID]||'', addr:r[CFG.C.ADDR]||'', phone:r[CFG.C.PHONE]||'' });
     });
@@ -292,8 +300,7 @@ async function loadData(showLoad = true) {
     assign({ invoices: inv, customers: cust, loading: false });
     go('home');
   } catch(e) {
-    const msg = e.result?.error?.message || e.message || 'שגיאה בטעינה';
-    toast('שגיאה: ' + msg, 'err');
+    toast('שגיאה: ' + (e.message || 'שגיאה בטעינה'), 'err');
     assign({ loading: false });
     go('home');
   }
@@ -325,8 +332,8 @@ function invToRow(inv) {
   a[CFG.C.NUM]=inv.num; a[CFG.C.TYPE]=inv.type; a[CFG.C.DATE]=inv.date;
   a[CFG.C.BIZ]=inv.biz; a[CFG.C.ID]=inv.bizId; a[CFG.C.ADDR]=inv.addr; a[CFG.C.PHONE]=inv.phone;
   const its = inv.items.slice(0,3);
-  const cols=[[CFG.C.I1D,CFG.C.I1Q,CFG.C.I1P],[CFG.C.I2D,CFG.C.I2Q,CFG.C.I2P],[CFG.C.I3D,CFG.C.I3Q,CFG.C.I3P]];
-  its.forEach((it,i)=>{ a[cols[i][0]]=it.desc; a[cols[i][1]]=it.qty; a[cols[i][2]]=it.price; });
+  [[CFG.C.I1D,CFG.C.I1Q,CFG.C.I1P],[CFG.C.I2D,CFG.C.I2Q,CFG.C.I2P],[CFG.C.I3D,CFG.C.I3Q,CFG.C.I3P]]
+    .forEach(([d,q,p],i)=>{ if(its[i]){a[d]=its[i].desc;a[q]=its[i].qty;a[p]=its[i].price;} });
   a[CFG.C.SUB]=inv.sub; a[CFG.C.VAT]=inv.vat; a[CFG.C.TOTAL]=inv.total; a[CFG.C.NOTES]=inv.notes;
   return a;
 }
@@ -334,26 +341,16 @@ function invToRow(inv) {
 async function saveInvoice(inv) {
   assign({ saving: true });
   try {
-    // Use append (fastest write method)
-    await gapi.client.sheets.spreadsheets.values.append({
-      spreadsheetId: CFG.SHEET_ID,
-      range: `${CFG.TAB_NAME}!A:T`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      resource: { values: [invToRow(inv)] }
-    });
-    // Optimistic: prepend to local list immediately
+    await sheetsAppend(`${CFG.TAB_NAME}!A:T`, [invToRow(inv)]);
+    sessionStorage.removeItem('ivcache');
     const newList = [inv, ...S.invoices];
     const existCust = S.customers.find(c => c.name === inv.biz);
     const newCust = existCust ? S.customers : [{ name:inv.biz, id:inv.bizId, addr:inv.addr, phone:inv.phone }, ...S.customers];
-    // Invalidate session cache
-    sessionStorage.removeItem('ivcache');
     assign({ invoices: newList, customers: newCust, saving: false });
     toast('החשבונית נשמרה בהצלחה ✓', 'ok');
     go('home');
   } catch(e) {
-    const msg = e.result?.error?.message || 'שגיאה בשמירה';
-    toast('שגיאה: ' + msg, 'err');
+    toast('שגיאה בשמירה: ' + (e.message || ''), 'err');
     assign({ saving: false });
   }
 }
@@ -813,15 +810,15 @@ function doSetup() {
   if (!sid) { toast('נא להזין Sheet ID', 'err'); return; }
   CFG.CLIENT_ID = cid; CFG.SHEET_ID = sid; CFG.TAB_NAME = tab;
   localStorage.setItem('cid', cid); localStorage.setItem('sid', sid); localStorage.setItem('tab', tab);
+  tokenClient = null;
   go('loading');
-  if (gapiOk && gisOk) { maybeInit(); auth(); }
-  else { toast('טוען ספריות Google...'); setTimeout(()=>{ if(gapiOk&&gisOk){maybeInit();auth();}else{toast('שגיאה: ספריות Google לא נטענו','err');go('setup');} }, 4000); }
+  if (typeof google !== 'undefined') { initTokenClient(); auth(); }
+  else { toast('טוען ספריות Google...'); const t=setInterval(()=>{ if(typeof google!=='undefined'){clearInterval(t);initTokenClient();auth();}},500); setTimeout(()=>clearInterval(t),10000); }
 }
 
 function doRefresh() {
   sessionStorage.removeItem('ivcache');
-  cache = null;
-  if (Date.now() > S.tokenExp) auth();
+  if (!S.token || Date.now() > S.tokenExp) auth();
   else loadData(true);
 }
 
@@ -853,7 +850,7 @@ function doSave() {
     items:FORM.items.filter(i=>i.desc),
     sub, vat, total, notes:FORM.notes
   };
-  if (Date.now() > S.tokenExp) {
+  if (!S.token || Date.now() > S.tokenExp) {
     toast('מחדש אימות...', 'info');
     auth(); return;
   }
