@@ -2,344 +2,392 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f4c8a">
-<title>מנהל חשבוניות</title>
-<script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+<meta name="theme-color" content="#1a3a6b">
+<title>חשבוניות</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap');
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --primary:#0f4c8a;
-  --primary-d:#083770;
-  --primary-l:#e8f1fb;
-  --green:#1a7a4a;
-  --green-l:#e6f5ec;
-  --bg:#f0f2f8;
-  --card:#fff;
-  --text:#1a1f36;
-  --muted:#6b7a99;
-  --border:#dde3ef;
-  --row3:#0f4c8a;
-  --danger:#b91c1c;
-  --safe-t:env(safe-area-inset-top,0px);
-  --safe-b:env(safe-area-inset-bottom,0px);
+  --blue:#1a3a6b;
+  --blue2:#2451a3;
+  --blue-l:#edf3ff;
+  --teal:#0e7490;
+  --teal-l:#ecfeff;
+  --green:#15803d;
+  --green-l:#dcfce7;
+  --red:#b91c1c;
+  --red-l:#fee2e2;
+  --amber:#92400e;
+  --amber-l:#fef3c7;
+  --bg:#f4f6fb;
+  --white:#ffffff;
+  --text:#0f172a;
+  --text2:#475569;
+  --text3:#94a3b8;
+  --border:#e2e8f0;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.15),0 2px 8px rgba(0,0,0,.08);
+  --r:14px;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
 }
-html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);direction:rtl;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:'Heebo',sans-serif;color:var(--text);direction:rtl;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
 #app{height:100%;display:flex;flex-direction:column;overflow:hidden;position:relative}
 
-/* HEADER */
-.hdr{background:var(--primary);color:#fff;padding:calc(var(--safe-t) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.25);position:relative;z-index:50;flex-shrink:0}
-.hdr-btn{background:none;border:none;color:#fff;cursor:pointer;padding:8px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.hdr-btn:active{background:rgba(255,255,255,.2)}
-.hdr-title{flex:1;font-size:17px;font-weight:700;letter-spacing:.1px}
-.hdr-sub{font-size:11px;opacity:.75;margin-top:1px}
+/* ── SCROLLABLE AREAS ── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
-/* CONTENT */
-.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b) + 90px)}
+/* ── HEADER ── */
+.hdr{
+  background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);
+  color:#fff;
+  padding:calc(var(--st) + 12px) 16px 12px;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:0 2px 20px rgba(26,58,107,.35);
+  flex-shrink:0;position:relative;z-index:10;
+}
+.hdr-back{background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr-back:active{background:rgba(255,255,255,.3)}
+.hdr-title{font-size:17px;font-weight:800;flex:1;letter-spacing:-.2px}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:1px;font-weight:500}
+.hdr-btn{background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.hdr-btn:active{background:rgba(255,255,255,.3)}
+.hdr-g{background:linear-gradient(135deg,var(--green) 0%,#166534 100%)}
 
-/* CARDS */
-.card{background:var(--card);border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.07);overflow:hidden;margin:10px 14px}
-.card-nm{margin:0}
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin:8px 14px}
+.card-flat{margin:0;border-radius:0;box-shadow:none;border-bottom:1px solid var(--border)}
+.card-flat:last-child{border-bottom:none}
 
-/* INVOICE CARDS */
-.inv-card{cursor:pointer;transition:transform .1s}
-.inv-card:active{transform:scale(.98)}
-.inv-row{padding:9px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.inv-row-1{border-bottom:1px solid var(--border);font-size:14px}
-.inv-row-2{border-bottom:1px solid var(--border);font-size:13px}
-.inv-row-3{color:var(--row3);font-weight:700;font-size:13px}
-.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;white-space:nowrap}
-.badge-h{background:var(--primary-l);color:var(--primary)}
-.badge-r{background:var(--green-l);color:var(--green)}
+/* ── INVOICE LIST CARDS ── */
+.inv-card{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.inv-card:active{transform:scale(.977);box-shadow:var(--shadow)}
+.inv-r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 14px}
+.inv-r1{border-bottom:1px solid var(--border)}
+.inv-r2{border-bottom:1px solid var(--border)}
+.inv-r3{background:var(--blue-l)}
 
-/* FAB */
-.fab-wrap{position:fixed;bottom:calc(var(--safe-b)+14px);left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:200;padding:0 14px}
-.fab{background:var(--primary);color:#fff;border:none;border-radius:26px;padding:13px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 18px rgba(15,76,138,.4);display:flex;align-items:center;gap:7px;white-space:nowrap;font-family:inherit;flex:1;justify-content:center;max-width:180px}
-.fab:active{transform:scale(.95)}
-.fab-g{background:var(--green);box-shadow:0 4px 18px rgba(26,122,74,.4)}
+/* row 1 */
+.inv-num{font-size:14px;font-weight:800;color:var(--blue)}
+.inv-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.2px}
+.badge-inv{background:var(--blue-l);color:var(--blue)}
+.badge-rec{background:var(--green-l);color:var(--green)}
 
-/* SEARCH */
-.srch{margin:10px 14px;position:relative}
-.srch-inp{width:100%;padding:11px 14px 11px 42px;border:2px solid var(--border);border-radius:12px;font-size:15px;background:#fff;color:var(--text);direction:rtl;outline:none;transition:border-color .2s;font-family:inherit}
-.srch-inp:focus{border-color:var(--primary)}
-.srch-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+/* row 2 */
+.inv-biz{font-size:13px;font-weight:700;color:var(--text)}
+.inv-id{font-size:12px;color:var(--text3)}
 
-/* FILTER TABS */
-.tabs{display:flex;gap:7px;padding:4px 14px 8px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tab{background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--muted);transition:all .15s;font-family:inherit}
-.tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+/* row 3 — date & total in blue */
+.inv-date{font-size:12px;font-weight:700;color:var(--blue)}
+.inv-total{font-size:13px;font-weight:800;color:var(--blue)}
 
-/* FORM */
-.fsec{margin:10px 14px}
-.fsec-t{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
-.fgrp{margin-bottom:10px}
-.flbl{display:block;font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:600}
-.finp,.fsel{width:100%;padding:11px 12px;border:2px solid var(--border);border-radius:10px;font-size:15px;background:#fff;color:var(--text);direction:rtl;outline:none;transition:border-color .2s;font-family:inherit;appearance:none}
-.finp:focus,.fsel:focus{border-color:var(--primary)}
-.finp[type=number]{text-align:left;direction:ltr}
+/* ── SEARCH ── */
+.srch-wrap{padding:10px 14px 4px;flex-shrink:0}
+.srch-box{display:flex;align-items:center;background:var(--white);border:2px solid var(--border);border-radius:12px;padding:0 12px;gap:8px;transition:border-color .2s}
+.srch-box:focus-within{border-color:var(--blue2)}
+.srch-box input{flex:1;border:none;outline:none;font-size:14px;padding:10px 0;background:none;color:var(--text);font-family:'Heebo',sans-serif;direction:rtl}
+.srch-ico{color:var(--text3);flex-shrink:0}
+
+/* ── FILTER TABS ── */
+.ftabs{display:flex;gap:6px;padding:6px 14px 8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.ftabs::-webkit-scrollbar{display:none}
+.ftab{border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--text3);background:var(--white);font-family:'Heebo',sans-serif;transition:all .15s}
+.ftab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* ── FAB ── */
+.fab-wrap{position:fixed;bottom:calc(var(--sb)+16px);left:0;right:0;display:flex;justify-content:center;gap:10px;z-index:100;padding:0 14px}
+.fab{border:none;border-radius:28px;padding:14px 20px;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:'Heebo',sans-serif;flex:1;justify-content:center;max-width:175px;letter-spacing:.1px}
+.fab-blue{background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);color:#fff;box-shadow:0 4px 20px rgba(26,58,107,.4)}
+.fab-teal{background:linear-gradient(135deg,var(--green) 0%,#166534 100%);color:#fff;box-shadow:0 4px 20px rgba(14,116,144,.35)}
+.fab:active{transform:scale(.94)}
+
+/* ── FORM FIELDS ── */
+.fsec{padding:0 14px;margin-top:10px}
+.fsec-label{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.finp{width:100%;padding:11px 13px;border:2px solid var(--border);border-radius:10px;font-size:15px;background:var(--white);color:var(--text);direction:rtl;outline:none;font-family:'Heebo',sans-serif;transition:border-color .2s;-webkit-appearance:none}
+.finp:focus{border-color:var(--blue2)}
+.finp[type=number]{direction:ltr;text-align:left}
 .finp[type=date]{direction:ltr;text-align:right}
+textarea.finp{resize:none}
+.flbl{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.fgrp{margin-bottom:10px}
 
-/* ITEMS */
-.item-hdr,.item-row{display:grid;grid-template-columns:1fr 60px 75px 32px;gap:6px;align-items:start}
-.item-hdr span{font-size:11px;font-weight:700;color:var(--muted)}
+/* ── ITEMS TABLE ── */
+.items-grid{display:grid;grid-template-columns:1fr 58px 72px 30px;gap:5px;align-items:start}
+.items-hdr span{font-size:11px;font-weight:700;color:var(--text3)}
 .item-row .finp{padding:9px 8px;font-size:13px}
-.btn-rm{background:none;border:1.5px solid #fca5a5;color:#dc2626;border-radius:8px;padding:9px 4px;cursor:pointer;font-size:14px;text-align:center;width:32px}
-.btn-add{background:var(--primary-l);border:2px dashed var(--primary);color:var(--primary);border-radius:10px;padding:11px;cursor:pointer;width:100%;font-size:13px;font-weight:700;text-align:center;margin-top:4px;font-family:inherit}
+.btn-rm{background:none;border:1.5px solid #fca5a5;color:#dc2626;border-radius:8px;width:30px;height:40px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.btn-add-item{background:var(--blue-l);border:2px dashed var(--blue2);color:var(--blue2);border-radius:10px;padding:10px;font-size:13px;font-weight:700;width:100%;cursor:pointer;text-align:center;margin-top:4px;font-family:'Heebo',sans-serif}
 
-/* TOTALS */
-.totals{background:var(--card);border-radius:14px;margin:10px 14px;overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.07)}
-.total-row{display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);font-size:14px}
+/* ── TOTALS ── */
+.totals-wrap{margin:10px 14px;background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);font-size:14px}
 .total-row:last-child{border:none}
-.total-grand{background:var(--primary);color:#fff;font-weight:800;font-size:16px}
-.total-grand span:last-child{font-size:18px}
+.total-lbl{color:var(--text2);font-weight:500}
+.total-val{font-weight:700}
+.total-grand{background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);color:#fff}
+.total-grand .total-lbl,.total-grand .total-val{color:#fff}
+.total-grand .total-val{font-size:17px;font-weight:900}
 
-/* BUTTONS */
-.btn-p{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:15px 20px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit;transition:opacity .15s}
-.btn-p:active{opacity:.85}
-.btn-p:disabled{opacity:.6}
-.btn-s{background:#fff;color:var(--primary);border:2px solid var(--primary);border-radius:12px;padding:13px 20px;font-size:16px;font-weight:700;cursor:pointer;width:100%;font-family:inherit}
-.btn-s:active{background:var(--primary-l)}
-.btn-d{background:#fff;color:var(--danger);border:2px solid var(--danger);border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;font-family:inherit}
+/* ── SAVE BAR ── */
+.save-bar{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);padding:10px 14px calc(var(--sb)+10px);box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:50;flex-shrink:0}
 
-/* SAVE BAR */
-.save-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:10px 14px calc(var(--safe-b)+10px);z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:none;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Heebo',sans-serif;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97);opacity:.9}
+.btn-primary{background:linear-gradient(135deg,var(--blue) 0%,var(--blue2) 100%);color:#fff;box-shadow:0 4px 20px rgba(26,58,107,.3)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.btn-outline{background:var(--white);color:var(--blue);border:2px solid var(--blue)}
+.btn-ghost{background:none;color:var(--text3);border:1.5px solid var(--border)}
+.btn-danger{background:var(--white);color:var(--red);border:2px solid var(--red)}
 
-/* DIALOG */
-.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:1000;animation:fadein .15s}
+/* ── DETAIL VIEW ── */
+.det-hero{padding:18px 14px;background:var(--blue-l);text-align:center}
+.det-biz{font-size:18px;font-weight:900;color:var(--blue)}
+.det-id{font-size:12px;color:var(--text3);margin-top:3px}
+.det-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.det-row:last-child{border:none}
+.det-lbl{color:var(--text3);font-weight:500}
+.det-val{font-weight:700;text-align:left}
+.items-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.items-tbl th{background:var(--bg);padding:8px 12px;text-align:right;font-weight:700;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.items-tbl td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.items-tbl td:last-child,.items-tbl th:last-child{text-align:left;font-weight:800}
+
+/* ── CUSTOMER MODAL ── */
+.sheet-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:500;display:flex;flex-direction:column;animation:fadein .18s}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
-.dlg{background:#fff;border-radius:20px 20px 0 0;padding:20px 16px calc(var(--safe-b)+20px);width:100%;animation:slideup .22s ease-out}
+.sheet{background:var(--white);border-radius:20px 20px 0 0;margin-top:auto;max-height:80vh;display:flex;flex-direction:column;animation:slideup .22s cubic-bezier(.22,.61,.36,1)}
 @keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.sheet-title{font-size:16px;font-weight:800}
+.sheet-x{background:var(--bg);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;color:var(--text2);display:flex;align-items:center;justify-content:center}
+.cust-item{padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.cust-item:active{background:var(--blue-l)}
+.cust-name{font-weight:700;font-size:14px}
+.cust-meta{font-size:12px;color:var(--text3);margin-top:2px}
+
+/* ── DIALOG ── */
+.dlg-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:800;display:flex;align-items:flex-end;animation:fadein .15s}
+.dlg{background:var(--white);border-radius:20px 20px 0 0;padding:22px 16px calc(var(--sb)+22px);width:100%;animation:slideup .2s cubic-bezier(.22,.61,.36,1)}
 .dlg-title{font-size:18px;font-weight:800;text-align:center;margin-bottom:6px}
-.dlg-text{font-size:14px;color:var(--muted);text-align:center;margin-bottom:22px}
+.dlg-body{font-size:14px;color:var(--text2);text-align:center;margin-bottom:22px;line-height:1.5}
 .dlg-btns{display:flex;gap:10px}
 
-/* CUSTOMER MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;flex-direction:column}
-.modal{background:#fff;border-radius:20px 20px 0 0;margin-top:auto;max-height:82vh;display:flex;flex-direction:column;animation:slideup .22s ease-out}
-.modal-hdr{padding:14px 16px;border-bottom:1px solid var(--border);font-size:16px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
-.modal-srch{padding:10px 14px;border-bottom:1px solid var(--border)}
-.modal-list{overflow-y:auto;flex:1}
-.cust-item{padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer}
-.cust-item:active{background:var(--primary-l)}
-.cust-name{font-weight:700;font-size:15px}
-.cust-id{font-size:12px;color:var(--muted);margin-top:2px}
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(var(--sb)+100px);left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:2000;white-space:nowrap;max-width:90%;text-align:center;box-shadow:var(--shadow-md);animation:toastin .28s cubic-bezier(.22,.61,.36,1)}
+@keyframes toastin{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.toast-info{background:var(--text);color:#fff}
+.toast-ok{background:var(--green);color:#fff}
+.toast-err{background:var(--red);color:#fff}
 
-/* LOADING */
-.spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+/* ── SPINNER / SKELETON ── */
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.skel{background:linear-gradient(90deg,#ececec 25%,#e0e0e0 50%,#ececec 75%);background-size:200% 100%;animation:shim 1.2s infinite;border-radius:6px}
-@keyframes shim{to{background-position:-200% 0}}
+.skel{background:linear-gradient(90deg,#e8edf5 25%,#dde3ef 50%,#e8edf5 75%);background-size:200% 100%;animation:skel 1.3s infinite;border-radius:6px}
+@keyframes skel{to{background-position:-200% 0}}
 
-/* TOAST */
-.toast{position:fixed;bottom:calc(var(--safe-b)+105px);left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:9px 20px;border-radius:24px;font-size:13px;z-index:3000;animation:tin .3s ease-out;white-space:nowrap;max-width:calc(100% - 32px);text-align:center}
-@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.toast-ok{background:var(--green)}
-.toast-err{background:var(--danger)}
+/* ── SAVING OVERLAY ── */
+.saving-ov{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:3000;display:flex;align-items:center;justify-content:center}
+.saving-box{background:var(--white);border-radius:18px;padding:28px 36px;text-align:center;box-shadow:var(--shadow-lg)}
+.saving-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue2);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 12px}
 
-/* LOGIN */
-.login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,var(--primary) 0%,var(--primary-d) 100%);overflow-y:auto}
-.login-icon{width:72px;height:72px;background:rgba(255,255,255,.18);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:36px}
-.login-title{color:#fff;font-size:26px;font-weight:800;margin-bottom:6px;text-align:center}
-.login-sub{color:rgba(255,255,255,.75);font-size:14px;margin-bottom:32px;text-align:center}
-.login-card{background:#fff;border-radius:18px;padding:22px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-.step-lbl{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:7px}
-.step-n{width:20px;height:20px;background:var(--primary);color:#fff;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.step-hint{font-size:11px;color:var(--muted);margin-top:4px}
-.step-group{margin-bottom:16px}
+/* ── SETUP / ONBOARDING ── */
+.setup-wrap{min-height:100%;overflow-y:auto;background:linear-gradient(160deg,var(--blue) 0%,#0f2655 50%,#0a1e45 100%);padding:20px 16px 40px;display:flex;flex-direction:column;align-items:center}
+.setup-logo{font-size:52px;margin:16px 0 10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+.setup-title{color:#fff;font-size:26px;font-weight:900;letter-spacing:-.5px;text-align:center}
+.setup-sub{color:rgba(255,255,255,.6);font-size:13px;margin-top:4px;margin-bottom:20px;text-align:center}
+.setup-card{background:rgba(255,255,255,.97);border-radius:18px;padding:18px;width:100%;max-width:420px;margin-bottom:10px;box-shadow:var(--shadow-lg)}
+.step-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.step-row:last-child{margin-bottom:0}
+.step-num{width:24px;height:24px;background:var(--blue);color:#fff;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-content{flex:1}
+.step-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px}
+.step-hint{font-size:11px;color:var(--text3);line-height:1.55}
+.code-pre{background:#0f172a;border-radius:10px;padding:12px;font-size:10.5px;font-family:'Courier New',monospace;color:#e2e8f0;direction:ltr;text-align:left;white-space:pre;overflow-x:auto;margin:8px 0;line-height:1.6;max-height:180px;overflow-y:auto}
+.copy-btn{background:var(--blue-l);border:1.5px solid var(--blue2);color:var(--blue);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;width:100%;font-family:'Heebo',sans-serif;margin-top:2px}
 
-/* INVOICE VIEW */
-.inv-view-top{padding:16px;text-align:center;font-size:19px;font-weight:800}
-.inv-view-num{font-size:12px;opacity:.8;margin-top:3px;font-weight:400}
-.detail-row{display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
-.detail-row:last-child{border:none}
-.dlbl{color:var(--muted)}
-.dval{font-weight:600;text-align:left}
-.items-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.items-tbl th{background:var(--bg);padding:7px 10px;text-align:right;font-weight:700;color:var(--muted)}
-.items-tbl td{padding:9px 10px;border-bottom:1px solid var(--border)}
-.items-tbl td:last-child,.items-tbl th:last-child{text-align:left}
+/* ── SETTINGS ── */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}
+.srow:last-child{border:none}
+.srow-lbl{font-weight:700;font-size:14px}
+.srow-val{color:var(--text3);font-size:12px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left}
 
-/* SETTINGS */
-.sett-row{display:flex;justify-content:space-between;align-items:center;padding:14px;border-bottom:1px solid var(--border)}
-.sett-row:last-child{border:none}
-.sett-lbl{font-weight:600;font-size:14px}
-.sett-val{color:var(--muted);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left}
+/* ── EMPTY STATE ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text3);text-align:center}
+.empty-ico{font-size:48px;margin-bottom:14px;opacity:.6}
+.empty-title{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px}
 
-/* EMPTY */
-.empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-ico{font-size:44px;margin-bottom:12px}
-
-/* SAVING OVERLAY */
-.saving{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:4000;display:flex;align-items:center;justify-content:center}
-.saving-box{background:#fff;border-radius:16px;padding:24px 32px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+/* ── IFRAME WARNING ── */
+.iframe-warn{background:var(--amber-l);border:2px solid #fbbf24;border-radius:12px;padding:12px 14px;margin:10px 14px;font-size:12px;line-height:1.6;color:var(--amber)}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-/* ─────────────────────────────────────────────
-   CONFIG (stored in localStorage)
-───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════════ */
 const CFG = {
-  CLIENT_ID: localStorage.getItem('cid') || '',
-  SHEET_ID:  localStorage.getItem('sid') || '',
-  TAB_NAME:  localStorage.getItem('tab') || 'חשבוניות',
-  // Column indices (0-based)
+  URL: localStorage.getItem('gs_url') || '',
+  TAB: localStorage.getItem('gs_tab') || 'חשבוניות',
   C: { NUM:0,TYPE:1,DATE:2,BIZ:3,ID:4,ADDR:5,PHONE:6,
        I1D:7,I1Q:8,I1P:9, I2D:10,I2Q:11,I2P:12, I3D:13,I3Q:14,I3P:15,
        SUB:16,VAT:17,TOTAL:18,NOTES:19 }
 };
 
-/* ─────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    STATE
-───────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 const S = {
   screen: 'setup',
-  invoices: [],
-  customers: [],
-  currentInv: null,
-  search: '',
-  filter: 'all',
-  loading: false,
-  saving: false,
-  token: null,
-  tokenExp: 0,
-  dialog: null,
-  custModal: false,
-  custSearch: '',
+  invoices: [], customers: [], currentInv: null,
+  search: '', filter: 'all',
+  saving: false, loading: false,
+  dialog: null, custModal: false, custSearch: '',
   toast: null,
 };
+let FORM = {}, dlgOk = null, dlgCancel = null, filteredCusts = [];
+const navStack = [];
 
-let FORM = {};
-let dlgOk = null, dlgCancel = null;
-let filteredCusts = [];
-let tokenClient = null;
-
-/* ─────────────────────────────────────────────
-   GOOGLE AUTH (GIS only — no gapi dependency)
-───────────────────────────────────────────── */
-function gisLoaded() {
-  if (CFG.CLIENT_ID) initTokenClient();
+/* ══════════════════════════════════════════════════════
+   NAVIGATION — no history.pushState (blocked in iframes)
+══════════════════════════════════════════════════════ */
+function go(screen) {
+  navStack.push(S.screen);
+  S.screen = screen;
+  render();
+}
+function goBack() {
+  S.screen = navStack.pop() || 'home';
+  render();
 }
 
-function initTokenClient() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CFG.CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    callback: (r) => {
-      if (r.error) {
-        assign({ saving: false, loading: false });
-        toast('שגיאת אימות: ' + r.error, 'err');
-        go('setup');
-        return;
-      }
-      S.token = r.access_token;
-      S.tokenExp = Date.now() + (r.expires_in || 3600) * 1000 - 60000;
-      loadData();
-    }
+/* Physical Android back — wrapped in try/catch for iframe safety */
+try {
+  history.pushState({}, '', ' ');
+  window.addEventListener('popstate', () => {
+    try { history.pushState({}, '', ' '); } catch(e) {}
+    handleBack();
   });
-  // Never auto-login — wait for user to press button
-}
+} catch(e) {}
 
-function auth() {
-  if (!tokenClient) {
-    if (typeof google !== 'undefined') initTokenClient();
-    else { toast('טוען ספריות Google...'); setTimeout(auth, 800); }
-    return;
+function handleBack() {
+  if (S.dialog)   { assign({ dialog: null }); return; }
+  if (S.custModal){ assign({ custModal: false }); return; }
+  switch(S.screen) {
+    case 'home':
+    case 'setup':
+      dlg('לצאת מהאפליקציה?', 'האם אתה בטוח שברצונך לצאת?', 'יציאה', 'ביטול',
+        () => { try { window.close(); } catch(e) {} },
+        () => assign({ dialog: null }));
+      break;
+    case 'new-invoice':
+      dlg('לצאת ללא שמירה?', 'השינויים לא יישמרו', 'צא', 'המשך עריכה',
+        () => { navStack.length = 0; assign({ screen: 'home', dialog: null }); },
+        () => assign({ dialog: null }));
+      break;
+    default:
+      goBack();
   }
-  // Always show the account picker so user can choose between accounts
-  tokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
-/* ─────────────────────────────────────────────
-   SHEETS REST API — direct fetch (no gapi)
-───────────────────────────────────────────── */
-const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets';
-
-function sheetHeaders() {
-  return { 'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json' };
+/* ══════════════════════════════════════════════════════
+   APPS SCRIPT API  — GET only (no CORS preflight)
+══════════════════════════════════════════════════════ */
+async function apiCall(params) {
+  const u = new URL(CFG.URL);
+  u.searchParams.set('tab', CFG.TAB);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+  let raw;
+  try {
+    const r = await fetch(u.toString());
+    raw = await r.text();
+  } catch(e) {
+    const inIframe = window.self !== window.top;
+    if (inIframe) throw new Error('האפליקציה פועלת בתוך Claude ולא יכולה לגשת לאינטרנט.\nהורד את קובץ ה-HTML ופתח אותו ישירות בדפדפן.');
+    throw new Error('לא ניתן להגיע לשרת: ' + e.message);
+  }
+  if (raw.trim().startsWith('<')) {
+    if (raw.includes('accounts.google') || raw.includes('ServiceLogin'))
+      throw new Error('הסקריפט דורש התחברות.\n\nתיקון: פרוס ▸ נהל פריסות ▸ ✏️ ▸ "מי יכול לגשת" → כולם ▸ גרסה חדשה ▸ פרוס');
+    throw new Error('השרת החזיר HTML. ודא שה-URL מסתיים ב /exec');
+  }
+  let j;
+  try { j = JSON.parse(raw); } catch(e) { throw new Error('תגובה לא תקינה:\n' + raw.slice(0,150)); }
+  if (!j.ok) throw new Error(j.error || 'שגיאה מהשרת');
+  return j;
 }
 
-async function sheetsGet(range) {
-  const url = `${SHEETS}/${encodeURIComponent(CFG.SHEET_ID)}/values/${encodeURIComponent(range)}?valueRenderOption=UNFORMATTED_VALUE`;
-  const r = await fetch(url, { headers: sheetHeaders() });
-  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.statusText); }
-  return r.json();
+async function loadSheet() {
+  const j = await apiCall({ action: 'read' });
+  return j.data || [];
+}
+async function appendRow(row) {
+  return apiCall({ action: 'write', row: encodeURIComponent(JSON.stringify(row)) });
 }
 
-async function sheetsAppend(range, values) {
-  const url = `${SHEETS}/${encodeURIComponent(CFG.SHEET_ID)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const r = await fetch(url, { method:'POST', headers: sheetHeaders(), body: JSON.stringify({ values }) });
-  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.statusText); }
-  return r.json();
-}
-
-async function loadData(showLoad = true) {
-  if (showLoad) go('loading');
-  const sc = sessionStorage.getItem('ivcache');
-  if (sc) {
+/* ══════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════ */
+async function loadData() {
+  go('loading');
+  const cached = sessionStorage.getItem('inv_cache');
+  if (cached) {
     try {
-      const { ts, inv, cust } = JSON.parse(sc);
-      if (Date.now() - ts < 300000) {
-        assign({ invoices: inv, customers: cust, loading: false });
-        go('home'); return;
-      }
+      const { ts, inv, cust } = JSON.parse(cached);
+      if (Date.now() - ts < 300000) { assign({ invoices: inv, customers: cust }); go('home'); return; }
     } catch(e) {}
   }
-  assign({ loading: true });
   try {
-    const data = await sheetsGet(`${CFG.TAB_NAME}!A:T`);
-    const rows = (data.values || []).slice(1);
-    const inv = rows.filter(r => r[0]).map(parseRow).reverse();
+    const rows = await loadSheet();
+    const data = rows.slice(1).filter(r => r[CFG.C.NUM]);
+    const inv = data.map(parseRow).reverse();
     const custMap = new Map();
-    rows.forEach(r => {
+    data.forEach(r => {
       const k = (r[CFG.C.BIZ]||'') + '|' + (r[CFG.C.ID]||'');
-      if ((r[CFG.C.BIZ]||'') && !custMap.has(k))
-        custMap.set(k, { name:r[CFG.C.BIZ]||'', id:r[CFG.C.ID]||'', addr:r[CFG.C.ADDR]||'', phone:r[CFG.C.PHONE]||'' });
+      if (r[CFG.C.BIZ] && !custMap.has(k))
+        custMap.set(k, { name: String(r[CFG.C.BIZ]), id: String(r[CFG.C.ID]||''), addr: String(r[CFG.C.ADDR]||''), phone: String(r[CFG.C.PHONE]||'') });
     });
-    const cust = Array.from(custMap.values());
-    sessionStorage.setItem('ivcache', JSON.stringify({ ts: Date.now(), inv, cust }));
-    assign({ invoices: inv, customers: cust, loading: false });
+    const cust = [...custMap.values()];
+    sessionStorage.setItem('inv_cache', JSON.stringify({ ts: Date.now(), inv, cust }));
+    assign({ invoices: inv, customers: cust });
     go('home');
   } catch(e) {
-    toast('שגיאה: ' + (e.message || 'שגיאה בטעינה'), 'err');
-    assign({ loading: false });
-    go('home');
+    toast(e.message || 'שגיאה בטעינה', 'err');
+    go('setup');
   }
 }
 
 function parseRow(r) {
   const items = [];
-  [[CFG.C.I1D,CFG.C.I1Q,CFG.C.I1P],[CFG.C.I2D,CFG.C.I2Q,CFG.C.I2P],[CFG.C.I3D,CFG.C.I3Q,CFG.C.I3P]].forEach(([d,q,p])=>{
-    if (r[d]) items.push({ desc:String(r[d]), qty:+r[q]||1, price:+r[p]||0 });
-  });
+  [[CFG.C.I1D,CFG.C.I1Q,CFG.C.I1P],[CFG.C.I2D,CFG.C.I2Q,CFG.C.I2P],[CFG.C.I3D,CFG.C.I3Q,CFG.C.I3P]]
+    .forEach(([d,q,p]) => { if (r[d]) items.push({ desc:String(r[d]), qty:+r[q]||1, price:+r[p]||0 }); });
   return {
-    num: String(r[CFG.C.NUM]||''),
-    type: String(r[CFG.C.TYPE]||'חשבונית'),
-    date: String(r[CFG.C.DATE]||''),
-    biz: String(r[CFG.C.BIZ]||''),
-    bizId: String(r[CFG.C.ID]||''),
-    addr: String(r[CFG.C.ADDR]||''),
-    phone: String(r[CFG.C.PHONE]||''),
-    items,
-    sub: +r[CFG.C.SUB]||0,
-    vat: +r[CFG.C.VAT]||0,
-    total: +r[CFG.C.TOTAL]||0,
+    num: String(r[CFG.C.NUM]||''), type: String(r[CFG.C.TYPE]||'חשבונית'),
+    date: String(r[CFG.C.DATE]||''), biz: String(r[CFG.C.BIZ]||''),
+    bizId: String(r[CFG.C.ID]||''), addr: String(r[CFG.C.ADDR]||''),
+    phone: String(r[CFG.C.PHONE]||''), items,
+    sub: +r[CFG.C.SUB]||0, vat: +r[CFG.C.VAT]||0, total: +r[CFG.C.TOTAL]||0,
     notes: String(r[CFG.C.NOTES]||''),
   };
 }
 
-function invToRow(inv) {
+function rowFromInv(inv) {
   const a = new Array(20).fill('');
   a[CFG.C.NUM]=inv.num; a[CFG.C.TYPE]=inv.type; a[CFG.C.DATE]=inv.date;
   a[CFG.C.BIZ]=inv.biz; a[CFG.C.ID]=inv.bizId; a[CFG.C.ADDR]=inv.addr; a[CFG.C.PHONE]=inv.phone;
-  const its = inv.items.slice(0,3);
   [[CFG.C.I1D,CFG.C.I1Q,CFG.C.I1P],[CFG.C.I2D,CFG.C.I2Q,CFG.C.I2P],[CFG.C.I3D,CFG.C.I3Q,CFG.C.I3P]]
-    .forEach(([d,q,p],i)=>{ if(its[i]){a[d]=its[i].desc;a[q]=its[i].qty;a[p]=its[i].price;} });
+    .forEach(([d,q,p],i) => { if (inv.items[i]) { a[d]=inv.items[i].desc; a[q]=inv.items[i].qty; a[p]=inv.items[i].price; } });
   a[CFG.C.SUB]=inv.sub; a[CFG.C.VAT]=inv.vat; a[CFG.C.TOTAL]=inv.total; a[CFG.C.NOTES]=inv.notes;
   return a;
 }
@@ -347,581 +395,520 @@ function invToRow(inv) {
 async function saveInvoice(inv) {
   assign({ saving: true });
   try {
-    await sheetsAppend(`${CFG.TAB_NAME}!A:T`, [invToRow(inv)]);
-    sessionStorage.removeItem('ivcache');
-    const newList = [inv, ...S.invoices];
-    const existCust = S.customers.find(c => c.name === inv.biz);
-    const newCust = existCust ? S.customers : [{ name:inv.biz, id:inv.bizId, addr:inv.addr, phone:inv.phone }, ...S.customers];
-    assign({ invoices: newList, customers: newCust, saving: false });
-    toast('החשבונית נשמרה בהצלחה ✓', 'ok');
+    await appendRow(rowFromInv(inv));
+    sessionStorage.removeItem('inv_cache');
+    const hasCust = S.customers.find(c => c.name === inv.biz);
+    assign({
+      invoices: [inv, ...S.invoices],
+      customers: hasCust ? S.customers : [{ name:inv.biz, id:inv.bizId, addr:inv.addr, phone:inv.phone }, ...S.customers],
+      saving: false,
+    });
+    toast('החשבונית נשמרה ✓', 'ok');
+    navStack.length = 0;
     go('home');
   } catch(e) {
-    toast('שגיאה בשמירה: ' + (e.message || ''), 'err');
+    toast(e.message || 'שגיאה בשמירה', 'err');
     assign({ saving: false });
   }
 }
 
-function nextNum() {
-  const nums = S.invoices.map(i => parseInt(i.num)).filter(n => !isNaN(n));
-  return nums.length ? String(Math.max(...nums) + 1) : '1001';
-}
-
-/* ─────────────────────────────────────────────
-   FORM / CALCULATIONS
-───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   FORM
+══════════════════════════════════════════════════════ */
 function initForm(type) {
+  const nums = S.invoices.map(i => parseInt(i.num)).filter(n => !isNaN(n));
   FORM = {
-    type, num: nextNum(),
+    type, num: nums.length ? String(Math.max(...nums)+1) : '1001',
     date: new Date().toISOString().slice(0,10),
     biz:'', bizId:'', addr:'', phone:'',
-    items:[{ desc:'', qty:1, price:'' }],
-    notes:''
+    items: [{ desc:'', qty:1, price:'' }],
+    notes: '',
   };
 }
-
 function calcTotals() {
-  const sub = FORM.items.reduce((s,it)=>s+(+it.qty||0)*(+it.price||0),0);
+  const sub = FORM.items.reduce((s,it) => s + (+it.qty||0) * (+it.price||0), 0);
   const vat = Math.round(sub * 17) / 100;
   return { sub: Math.round(sub*100)/100, vat, total: Math.round((sub+vat)*100)/100 };
 }
 
-function fmt(n) {
-  if (n === '' || n === undefined || n === null) return '—';
-  return '₪' + Number(n).toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function fmtDate(d) {
-  if (!d) return '';
-  if (d.includes('-')) { const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }
-  return d;
-}
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ─────────────────────────────────────────────
-   STATE HELPERS
-───────────────────────────────────────────── */
-function assign(o) { Object.assign(S, o); render(); }
-function go(screen) { S.screen = screen; render(); }
-
-function toast(msg, type='info') {
-  S.toast = { msg, type };
-  render();
-  setTimeout(()=>{ S.toast=null; render(); }, 3200);
-}
-
-function dialog(title, text, ok, cancel, onOk, onCancel) {
-  dlgOk = onOk; dlgCancel = onCancel;
-  assign({ dialog: { title, text, ok, cancel } });
-}
-
-/* ─────────────────────────────────────────────
-   BACK BUTTON
-───────────────────────────────────────────── */
-history.pushState({}, '', '');
-window.addEventListener('popstate', () => {
-  history.pushState({}, '', ''); // re-push to stay in SPA
-  switch(S.screen) {
-    case 'home':
-      dialog('לצאת מהאפליקציה?','האם אתה בטוח שברצונך לצאת?','יציאה','ביטול',
-        ()=>{ window.location.href='about:blank'; }, ()=>assign({dialog:null}));
-      break;
-    case 'new-invoice':
-      dialog('לצאת ללא שמירה?','השינויים לא יישמרו','צא','המשך עריכה',
-        ()=>assign({screen:'home',dialog:null}), ()=>assign({dialog:null}));
-      break;
-    case 'view-invoice':
-      assign({screen:'home',currentInv:null}); break;
-    case 'settings':
-      assign({screen:'home'}); break;
-    case 'setup':
-      dialog('לצאת מהאפליקציה?','האם אתה בטוח שברצונך לצאת?','יציאה','ביטול',
-        ()=>{ window.location.href='about:blank'; }, ()=>assign({dialog:null}));
-      break;
-  }
-});
-
-/* ─────────────────────────────────────────────
-   FILTER
-───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
+function fmt(n)    { return '₪' + Number(n||0).toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtD(d)   { if (!d) return ''; if (d.includes('-')) { const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; } return d; }
+function x(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function assign(o) { Object.assign(S,o); render(); }
+function toast(msg, type='info') { S.toast={msg,type}; render(); setTimeout(()=>{S.toast=null;render();},3000); }
+function dlg(title,body,ok,cancel,onOk,onCancel) { dlgOk=onOk; dlgCancel=onCancel; assign({ dialog:{title,body,ok,cancel} }); }
 function getFiltered() {
   let r = S.invoices;
   if (S.filter !== 'all') r = r.filter(i => i.type === S.filter);
-  if (S.search) {
-    const q = S.search.toLowerCase();
-    r = r.filter(i => i.biz.toLowerCase().includes(q) || i.bizId.includes(q) || i.num.includes(q));
-  }
+  if (S.search) { const q=S.search.toLowerCase(); r=r.filter(i=>i.biz.toLowerCase().includes(q)||i.bizId.includes(q)||i.num.includes(q)); }
   return r;
 }
 
-/* ─────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
+   APPS SCRIPT CODE (shown on setup screen)
+══════════════════════════════════════════════════════ */
+const GAS_CODE = `var SHEET_ID = 'YOUR_SHEET_ID_HERE';
+
+function doGet(e) {
+  try {
+    var p   = e && e.parameter ? e.parameter : {};
+    var tab = p.tab || 'חשבוניות';
+    var ss  = SpreadsheetApp.openById(SHEET_ID);
+    var sh  = ss.getSheetByName(tab);
+    if (!sh) return out({ok:false, error:'לשונית לא נמצאה: '+tab});
+    if (p.action === 'write') {
+      var row = JSON.parse(decodeURIComponent(p.row));
+      sh.appendRow(row);
+      return out({ok:true});
+    }
+    return out({ok:true, data: sh.getDataRange().getValues()});
+  } catch(err) { return out({ok:false, error:err.message}); }
+}
+
+function out(d) {
+  return ContentService
+    .createTextOutput(JSON.stringify(d))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+/* ══════════════════════════════════════════════════════
    RENDER
-───────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function render() {
-  const app = document.getElementById('app');
-  let html = '';
+  let h = '';
   switch(S.screen) {
-    case 'setup':   html = rSetup(); break;
-    case 'init':
-    case 'loading': html = rLoading(); break;
-    case 'home':    html = rHome(); break;
-    case 'new-invoice': html = rNewInv(); break;
-    case 'view-invoice': html = rViewInv(); break;
-    case 'settings': html = rSettings(); break;
-    default: html = rHome();
+    case 'setup':       h = rSetup();    break;
+    case 'loading':     h = rLoading();  break;
+    case 'home':        h = rHome();     break;
+    case 'new-invoice': h = rForm();     break;
+    case 'view':        h = rView();     break;
+    case 'settings':    h = rSettings(); break;
+    default:            h = rHome();
   }
-  if (S.dialog)    html += rDialog();
-  if (S.custModal) html += rCustModal();
-  if (S.toast)     html += rToast();
-  if (S.saving)    html += rSaving();
-  app.innerHTML = html;
-  afterRender();
+  if (S.dialog)    h += rDialog();
+  if (S.custModal) h += rCustModal();
+  if (S.toast)     h += `<div class="toast toast-${x(S.toast.type)}">${x(S.toast.msg)}</div>`;
+  if (S.saving)    h += `<div class="saving-ov"><div class="saving-box"><div class="saving-spin"></div><div style="font-weight:700;font-size:15px">שומר חשבונית...</div></div></div>`;
+  document.getElementById('app').innerHTML = h;
 }
 
-function afterRender() {
-  if (S.custModal) {
-    setTimeout(() => { const el=document.getElementById('csrch'); if(el) el.focus(); }, 250);
-  }
-}
-
-/* ─────────────────────────────────────────────
-   SCREENS
-───────────────────────────────────────────── */
+/* ─── SETUP ─── */
 function rSetup() {
-  const here = location.origin || 'http://localhost';
-  return `<div class="login-wrap">
-    <div class="login-icon">📄</div>
-    <div class="login-title">מנהל חשבוניות</div>
-    <div class="login-sub">הגדרה ראשונית — עשה זאת פעם אחת</div>
-    <div class="login-card">
+  const inIframe = window.self !== window.top;
+  return `<div class="setup-wrap">
+    ${inIframe ? `<div class="iframe-warn" style="width:100%;max-width:420px;margin-bottom:0;margin-top:0">
+      <strong>⚠️ אתה בתוך Claude</strong> — האפליקציה לא יכולה להתחבר לאינטרנט מכאן.<br>
+      <strong>הורד את קובץ ה-HTML ופתח אותו ישירות בדפדפן / בטלפון.</strong>
+    </div>` : ''}
+    <div class="setup-logo">📄</div>
+    <div class="setup-title">מנהל חשבוניות</div>
+    <div class="setup-sub">הגדרה חד-פעמית · 3 שלבים בלבד</div>
 
-      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:11px 13px;margin-bottom:16px;font-size:12px;color:#7a5800;line-height:1.6">
-        <strong>שגיאת "OAuth client wasn't found"?</strong><br>
-        וודא שב-Google Cloud Console:<br>
-        • סוג האפליקציה = <strong>Web application</strong><br>
-        • ב-"Authorized JavaScript origins" הוסף:<br>
-        <code style="background:#fff;padding:2px 6px;border-radius:4px;font-size:11px;direction:ltr;display:inline-block;margin-top:3px">${esc(here)}</code>
-      </div>
-
-      <div class="step-group">
-        <div class="step-lbl"><div class="step-n">1</div>Google Cloud Console</div>
-        <div class="step-hint" style="margin-bottom:8px">
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--primary);font-weight:700">פתח את Credentials ←</a>
-          &nbsp;→ צור OAuth 2.0 Client ID → Web application
+    <div class="setup-card">
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">צור Apps Script חדש</div>
+          <div class="step-hint">פתח <a href="https://script.google.com/home/projects/create" target="_blank" style="color:var(--blue2);font-weight:700">script.google.com ←</a> · מחק הכל · הדבק את הקוד · החלף את <code>YOUR_SHEET_ID_HERE</code> במזהה הגיליון שלך</div>
+          <div class="code-pre">${x(GAS_CODE)}</div>
+          <button class="copy-btn" onclick="copyCode()">📋 העתק קוד</button>
         </div>
       </div>
-
-      <div class="step-group">
-        <div class="step-lbl"><div class="step-n">2</div>Client ID</div>
-        <input class="finp" id="scid" value="${esc(CFG.CLIENT_ID)}" placeholder="xxxxxx.apps.googleusercontent.com" style="direction:ltr;font-size:12px" autocomplete="off" autocorrect="off" spellcheck="false">
-        <div class="step-hint">מסתיים תמיד ב: .apps.googleusercontent.com</div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">פרוס כ-Web App</div>
+          <div class="step-hint"><strong>פרוס ▸ פריסה חדשה</strong> · סוג: <strong>אפליקציית אינטרנט</strong> · הרץ בשם: <strong>אני</strong> · גישה: <strong>כולם</strong> · פרוס · אשר הרשאות · העתק URL</div>
+        </div>
       </div>
-
-      <div class="step-group">
-        <div class="step-lbl"><div class="step-n">3</div>Sheet ID</div>
-        <input class="finp" id="ssid" value="${esc(CFG.SHEET_ID)}" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..." style="direction:ltr;font-size:12px" autocomplete="off" autocorrect="off" spellcheck="false">
-        <div class="step-hint">מה-URL של הגיליון: /spreadsheets/d/<strong>ID</strong>/edit</div>
+      <div class="step-row" style="margin-bottom:0">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">הדבק כתובת ופרטי גיליון</div>
+          <div class="fgrp" style="margin-top:8px">
+            <label class="flbl">Web App URL (מסתיים ב /exec)</label>
+            <input class="finp" id="s_url" value="${x(CFG.URL)}" placeholder="https://script.google.com/macros/s/..." style="direction:ltr;font-size:12px" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="fgrp" style="margin-bottom:0">
+            <label class="flbl">שם הלשונית</label>
+            <input class="finp" id="s_tab" value="${x(CFG.TAB)}" placeholder="חשבוניות">
+          </div>
+        </div>
       </div>
+    </div>
 
-      <div class="step-group" style="margin-bottom:20px">
-        <div class="step-lbl"><div class="step-n">4</div>שם הגיליון (Tab)</div>
-        <input class="finp" id="stab" value="${esc(CFG.TAB_NAME)}" placeholder="חשבוניות">
-        <div class="step-hint">שם הלשונית בתחתית הגיליון (ברירת מחדל: חשבוניות)</div>
-      </div>
-
-      <button class="btn-p" onclick="doSetup()">חבר לגיליון ←</button>
-      ${(CFG.CLIENT_ID||CFG.SHEET_ID) ? `<button class="btn-s" style="margin-top:10px" onclick="clearSaved()">🗑 נקה הגדרות שמורות</button>` : ''}
+    <div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" onclick="doSetup()" style="font-size:17px;padding:16px">
+        חבר לגיליון ←
+      </button>
+      ${CFG.URL ? `<button class="btn btn-ghost" onclick="clearCfg()">🗑 נקה הגדרות שמורות</button>` : ''}
     </div>
   </div>`;
 }
 
+/* ─── LOADING ─── */
 function rLoading() {
-  return `<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--primary)">
-    <div style="font-size:48px;margin-bottom:24px">📄</div>
-    <div class="spin" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></div>
-    <div style="color:#fff;margin-top:16px;font-size:15px">טוען נתונים...</div>
+  return `<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--blue) 0%,#0f2655 100%)">
+    <div style="font-size:54px;margin-bottom:28px">📄</div>
+    <div class="spinner"></div>
+    <div style="color:#fff;margin-top:20px;font-size:15px;font-weight:600;opacity:.85">טוען נתונים...</div>
   </div>`;
 }
 
+/* ─── HOME ─── */
 function rHome() {
   const filtered = getFiltered();
-  const c = S.invoices.length;
+  const total = S.invoices.length;
   return `<div style="height:100%;display:flex;flex-direction:column;overflow:hidden">
     <div class="hdr">
       <div style="flex:1">
         <div class="hdr-title">החשבוניות שלי</div>
-        <div class="hdr-sub">${c} חשבוניות</div>
+        <div class="hdr-sub">${total} חשבוניות</div>
       </div>
-      <button class="hdr-btn" onclick="doRefresh()" title="רענן">
-        ${ico('refresh')}
-      </button>
-      <button class="hdr-btn" onclick="go('settings')" title="הגדרות">
-        ${ico('settings')}
-      </button>
+      <button class="hdr-btn" onclick="doRefresh()" title="רענן">${svgRefresh()}</button>
+      <button class="hdr-btn" onclick="go('settings')" title="הגדרות">${svgSettings()}</button>
     </div>
-    <div class="srch">
-      <svg class="srch-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="srch-inp" placeholder="חפש לפי שם, ח.פ, מספר..." value="${esc(S.search)}" oninput="S.search=this.value;render()">
+    <div class="srch-wrap">
+      <div class="srch-box">
+        <span class="srch-ico">${svgSearch()}</span>
+        <input placeholder="חפש שם, ח.פ, מספר..." value="${x(S.search)}" oninput="S.search=this.value;render()">
+      </div>
     </div>
-    <div class="tabs">
-      <button class="tab ${S.filter==='all'?'on':''}" onclick="S.filter='all';render()">הכל (${c})</button>
-      <button class="tab ${S.filter==='חשבונית'?'on':''}" onclick="S.filter='חשבונית';render()">חשבוניות</button>
-      <button class="tab ${S.filter==='חשבונית מס קבלה'?'on':''}" onclick="S.filter='חשבונית מס קבלה';render()">חשב"ק</button>
+    <div class="ftabs">
+      <button class="ftab ${S.filter==='all'?'on':''}" onclick="S.filter='all';render()">הכל (${total})</button>
+      <button class="ftab ${S.filter==='חשבונית'?'on':''}" onclick="S.filter='חשבונית';render()">חשבוניות</button>
+      <button class="ftab ${S.filter==='חשבונית מס קבלה'?'on':''}" onclick="S.filter='חשבונית מס קבלה';render()">חשב"ק</button>
     </div>
-    <div class="content">
-      ${S.loading ? rSkels() : filtered.length===0 ? rEmpty() : filtered.map(rCard).join('')}
+    <div class="scroll" style="padding-bottom:90px">
+      ${S.loading ? rSkeletons() : filtered.length === 0 ? rEmpty() : filtered.map(rInvCard).join('')}
     </div>
     <div class="fab-wrap">
-      <button class="fab" onclick="startNew('חשבונית')">
-        ${ico('plus')} חשבונית
-      </button>
-      <button class="fab fab-g" onclick="startNew('חשבונית מס קבלה')">
-        ${ico('plus')} חשב"ק
-      </button>
+      <button class="fab fab-blue" onclick="startNew('חשבונית')">${svgPlus()} חשבונית</button>
+      <button class="fab fab-teal" onclick="startNew('חשבונית מס קבלה')">${svgPlus()} חשב"ק</button>
     </div>
   </div>`;
 }
 
-function rCard(inv) {
-  const isRec = inv.type==='חשבונית מס קבלה';
-  const badge = isRec ? `<span class="badge badge-r">חשב"ק</span>` : `<span class="badge badge-h">חשבונית</span>`;
-  return `<div class="card inv-card" onclick="openInv('${esc(inv.num)}')">
-    <div class="inv-row inv-row-1">
-      <span style="font-weight:800;font-size:15px">מס׳ ${esc(inv.num)}</span>
-      ${badge}
+function rInvCard(inv) {
+  const isR = inv.type === 'חשבונית מס קבלה';
+  return `<div class="card inv-card" onclick="openInv('${x(inv.num)}')">
+    <div class="inv-r inv-r1">
+      <span class="inv-num">מס׳ ${x(inv.num)}</span>
+      <span class="inv-badge ${isR?'badge-rec':'badge-inv'}">${isR?'חשב"ק':'חשבונית'}</span>
     </div>
-    <div class="inv-row inv-row-2">
-      <span style="font-weight:600">${esc(inv.biz)}</span>
-      <span style="color:var(--muted)">ח.פ: ${esc(inv.bizId)}</span>
+    <div class="inv-r inv-r2">
+      <span class="inv-biz">${x(inv.biz)}</span>
+      <span class="inv-id">ח.פ: ${x(inv.bizId)}</span>
     </div>
-    <div class="inv-row inv-row-3">
-      <span>📅 ${fmtDate(inv.date)}</span>
-      <span>${fmt(inv.total)}</span>
+    <div class="inv-r inv-r3">
+      <span class="inv-date">📅 ${fmtD(inv.date)}</span>
+      <span class="inv-total">${fmt(inv.total)}</span>
     </div>
   </div>`;
 }
 
-function rSkels() {
-  return [1,2,3,4].map(()=>`<div class="card" style="padding:0">
-    <div class="inv-row inv-row-1"><div class="skel" style="width:80px;height:15px"></div><div class="skel" style="width:56px;height:18px;border-radius:10px"></div></div>
-    <div class="inv-row inv-row-2"><div class="skel" style="width:130px;height:14px"></div><div class="skel" style="width:75px;height:13px"></div></div>
-    <div class="inv-row inv-row-3"><div class="skel" style="width:95px;height:14px"></div><div class="skel" style="width:65px;height:14px"></div></div>
+function rSkeletons() {
+  return [1,2,3,4].map(() => `<div class="card" style="padding:0">
+    <div class="inv-r inv-r1"><div class="skel" style="width:75px;height:15px"></div><div class="skel" style="width:55px;height:19px;border-radius:10px"></div></div>
+    <div class="inv-r inv-r2"><div class="skel" style="width:140px;height:14px"></div><div class="skel" style="width:70px;height:13px"></div></div>
+    <div class="inv-r inv-r3"><div class="skel" style="width:90px;height:13px"></div><div class="skel" style="width:70px;height:14px"></div></div>
   </div>`).join('');
 }
 
 function rEmpty() {
-  return `<div class="empty"><div class="empty-ico">📋</div><div style="font-weight:700;font-size:16px;margin-bottom:6px">אין חשבוניות</div><div style="font-size:14px">לחץ + כדי ליצור חשבונית חדשה</div></div>`;
+  return `<div class="empty">
+    <div class="empty-ico">📋</div>
+    <div class="empty-title">אין חשבוניות עדיין</div>
+    <div class="empty-sub">לחץ על + כדי ליצור חשבונית חדשה</div>
+  </div>`;
 }
 
-function rNewInv() {
-  const isRec = FORM.type==='חשבונית מס קבלה';
-  const hdrColor = isRec ? 'var(--green)' : 'var(--primary)';
-  const {sub,vat,total} = calcTotals();
+/* ─── FORM ─── */
+function rForm() {
+  const isR = FORM.type === 'חשבונית מס קבלה';
+  const hdrClass = isR ? 'hdr-g' : '';
+  const { sub, vat, total } = calcTotals();
   return `<div style="height:100%;display:flex;flex-direction:column;overflow:hidden">
-    <div class="hdr" style="background:${hdrColor}">
-      <button class="hdr-btn" onclick="backFromForm()">${ico('back')}</button>
+    <div class="hdr ${hdrClass}">
+      <button class="hdr-back" onclick="handleBack()">${svgChevron()}</button>
       <div style="flex:1">
-        <div class="hdr-title">יצירת ${esc(FORM.type)}</div>
-        <div class="hdr-sub">מס׳ ${esc(FORM.num)}</div>
+        <div class="hdr-title">יצירת ${x(FORM.type)}</div>
+        <div class="hdr-sub">מס׳ ${x(FORM.num)}</div>
       </div>
     </div>
-    <div class="content">
+    <div class="scroll" style="padding-bottom:80px">
+
       <!-- CUSTOMER -->
-      <div class="fsec">
-        <div class="fsec-t">פרטי לקוח</div>
-        <div class="card card-nm" style="padding:12px 14px">
-          <button onclick="openCustModal()" style="width:100%;background:var(--primary-l);border:2px dashed var(--primary);color:var(--primary);border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;font-family:inherit;text-align:center">
-            🔍 חפש לפי שם העסק או ח.פ
+      <div class="fsec" style="margin-top:12px">
+        <div class="fsec-label">פרטי לקוח</div>
+        <div class="card" style="margin:0;padding:12px 14px">
+          <button onclick="openCust()" style="width:100%;background:var(--blue-l);border:2px dashed var(--blue2);color:var(--blue2);border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;font-family:'Heebo',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px">
+            ${svgSearch()} חפש לפי שם העסק או ח.פ
           </button>
           <div class="fgrp">
             <label class="flbl">שם העסק *</label>
-            <input class="finp" id="fbiz" value="${esc(FORM.biz)}" oninput="FORM.biz=this.value" placeholder="שם החברה / עסק">
+            <input class="finp" value="${x(FORM.biz)}" oninput="FORM.biz=this.value" placeholder="שם החברה / עסק">
           </div>
           <div class="fgrp">
             <label class="flbl">מספר ח.פ / ע.מ</label>
-            <input class="finp" id="fbid" value="${esc(FORM.bizId)}" oninput="FORM.bizId=this.value" placeholder="000000000" inputmode="numeric" style="direction:ltr;text-align:right">
+            <input class="finp" value="${x(FORM.bizId)}" oninput="FORM.bizId=this.value" placeholder="000000000" inputmode="numeric" style="direction:ltr;text-align:right">
           </div>
           <div class="fgrp">
             <label class="flbl">כתובת</label>
-            <input class="finp" value="${esc(FORM.addr)}" oninput="FORM.addr=this.value" placeholder="רחוב, עיר">
+            <input class="finp" value="${x(FORM.addr)}" oninput="FORM.addr=this.value" placeholder="רחוב, עיר">
           </div>
           <div class="fgrp" style="margin-bottom:0">
             <label class="flbl">טלפון</label>
-            <input class="finp" value="${esc(FORM.phone)}" oninput="FORM.phone=this.value" placeholder="05X-XXXXXXX" inputmode="tel">
+            <input class="finp" value="${x(FORM.phone)}" oninput="FORM.phone=this.value" placeholder="05X-XXXXXXX" inputmode="tel">
           </div>
         </div>
       </div>
-      <!-- DATE & NOTES -->
+
+      <!-- DOC DETAILS -->
       <div class="fsec">
-        <div class="fsec-t">פרטי מסמך</div>
-        <div class="card card-nm" style="padding:12px 14px">
+        <div class="fsec-label">פרטי מסמך</div>
+        <div class="card" style="margin:0;padding:12px 14px">
           <div class="fgrp">
             <label class="flbl">תאריך</label>
-            <input class="finp" type="date" value="${esc(FORM.date)}" oninput="FORM.date=this.value">
+            <input class="finp" type="date" value="${x(FORM.date)}" oninput="FORM.date=this.value">
           </div>
           <div class="fgrp" style="margin-bottom:0">
             <label class="flbl">הערות</label>
-            <textarea class="finp" rows="2" oninput="FORM.notes=this.value" placeholder="הערות / תנאי תשלום" style="resize:none">${esc(FORM.notes)}</textarea>
+            <textarea class="finp" rows="2" oninput="FORM.notes=this.value" placeholder="הערות / תנאי תשלום">${x(FORM.notes)}</textarea>
           </div>
         </div>
       </div>
+
       <!-- ITEMS -->
       <div class="fsec">
-        <div class="fsec-t">פריטים</div>
-        <div class="card card-nm" style="padding:12px 14px">
-          <div class="item-hdr" style="margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">
-            <span>תיאור</span><span>כמות</span><span>מחיר ₪</span><span></span>
+        <div class="fsec-label">פריטים</div>
+        <div class="card" style="margin:0;padding:12px 14px">
+          <div class="items-grid items-hdr" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span>תיאור</span><span>כמות</span><span>מחיר</span><span></span>
           </div>
-          ${FORM.items.map((it,i)=>`
-          <div class="item-row" style="margin-bottom:8px">
-            <input class="finp" value="${esc(it.desc)}" oninput="FORM.items[${i}].desc=this.value" placeholder="תיאור">
-            <input class="finp" type="number" value="${it.qty}" oninput="FORM.items[${i}].qty=+this.value||0;updTotals()" min="0.01" step="0.01">
-            <input class="finp" type="number" value="${it.price}" oninput="FORM.items[${i}].price=+this.value||0;updTotals()" min="0" step="0.01">
+          ${FORM.items.map((it,i) => `
+          <div class="items-grid item-row" style="margin-bottom:7px">
+            <input class="finp" value="${x(it.desc)}" oninput="FORM.items[${i}].desc=this.value" placeholder="תיאור...">
+            <input class="finp" type="number" value="${it.qty}" oninput="FORM.items[${i}].qty=+this.value||0;liveTotal()" min="0.01" step="0.01">
+            <input class="finp" type="number" value="${it.price}" oninput="FORM.items[${i}].price=+this.value||0;liveTotal()" min="0" step="0.01">
             <button class="btn-rm" onclick="rmItem(${i})">✕</button>
           </div>`).join('')}
-          ${FORM.items.length<3?`<button class="btn-add" onclick="addItem()">+ הוסף פריט</button>`:''}
+          ${FORM.items.length < 3 ? `<button class="btn-add-item" onclick="addItem()">＋ הוסף פריט</button>` : ''}
         </div>
       </div>
+
       <!-- TOTALS -->
-      <div class="totals">
-        <div class="total-row"><span>סה"כ לפני מע"מ</span><span id="ts">${fmt(sub)}</span></div>
-        <div class="total-row"><span>מע"מ 17%</span><span id="tv">${fmt(vat)}</span></div>
-        <div class="total-row total-grand"><span>סה"כ לתשלום</span><span id="tt">${fmt(total)}</span></div>
+      <div class="totals-wrap">
+        <div class="total-row"><span class="total-lbl">סה"כ לפני מע"מ</span><span class="total-val" id="t_sub">${fmt(sub)}</span></div>
+        <div class="total-row"><span class="total-lbl">מע"מ 17%</span><span class="total-val" id="t_vat">${fmt(vat)}</span></div>
+        <div class="total-row total-grand"><span class="total-lbl">סה"כ לתשלום</span><span class="total-val" id="t_tot">${fmt(total)}</span></div>
       </div>
-      <div style="height:16px"></div>
+      <div style="height:10px"></div>
     </div>
     <div class="save-bar">
-      <button class="btn-p" onclick="doSave()" ${S.saving?'disabled':''}>💾 שמור ${esc(FORM.type)}</button>
+      <button class="btn btn-primary" onclick="doSave()" ${S.saving?'disabled':''}>💾 שמור ${x(FORM.type)}</button>
     </div>
   </div>`;
 }
 
-function rViewInv() {
-  const inv = S.currentInv;
-  if (!inv) return '';
-  const isRec = inv.type==='חשבונית מס קבלה';
-  const hdrColor = isRec ? 'var(--green)' : 'var(--primary)';
+/* ─── VIEW INVOICE ─── */
+function rView() {
+  const inv = S.currentInv; if (!inv) return '';
+  const isR = inv.type === 'חשבונית מס קבלה';
   return `<div style="height:100%;display:flex;flex-direction:column;overflow:hidden">
-    <div class="hdr" style="background:${hdrColor}">
-      <button class="hdr-btn" onclick="assign({screen:'home',currentInv:null})">${ico('back')}</button>
+    <div class="hdr ${isR?'hdr-g':''}">
+      <button class="hdr-back" onclick="assign({screen:'home',currentInv:null})">${svgChevron()}</button>
       <div style="flex:1">
-        <div class="hdr-title">${esc(inv.type)}</div>
-        <div class="hdr-sub">מס׳ ${esc(inv.num)}</div>
+        <div class="hdr-title">${x(inv.type)}</div>
+        <div class="hdr-sub">מס׳ ${x(inv.num)}</div>
       </div>
     </div>
-    <div class="content">
+    <div class="scroll">
       <div class="card">
-        <div class="inv-view-top" style="background:${hdrColor}15">
-          <div style="font-size:18px;font-weight:800">${esc(inv.biz)}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">ח.פ: ${esc(inv.bizId)}</div>
+        <div class="det-hero">
+          <div class="det-biz">${x(inv.biz)}</div>
+          <div class="det-id">ח.פ: ${x(inv.bizId)}</div>
         </div>
-        ${inv.addr?`<div class="detail-row"><span class="dlbl">כתובת</span><span class="dval">${esc(inv.addr)}</span></div>`:''}
-        ${inv.phone?`<div class="detail-row"><span class="dlbl">טלפון</span><span class="dval" style="direction:ltr">${esc(inv.phone)}</span></div>`:''}
-        <div class="detail-row"><span class="dlbl">תאריך</span><span class="dval" style="color:var(--row3);font-size:15px">${fmtDate(inv.date)}</span></div>
+        ${inv.addr  ? `<div class="det-row"><span class="det-lbl">כתובת</span><span class="det-val">${x(inv.addr)}</span></div>` : ''}
+        ${inv.phone ? `<div class="det-row"><span class="det-lbl">טלפון</span><span class="det-val" style="direction:ltr">${x(inv.phone)}</span></div>` : ''}
+        <div class="det-row">
+          <span class="det-lbl">תאריך</span>
+          <span class="det-val" style="color:var(--blue);font-size:15px">${fmtD(inv.date)}</span>
+        </div>
       </div>
       <div class="card" style="padding:0">
-        <div style="padding:10px 14px;background:var(--bg);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">פריטים</div>
+        <div style="padding:10px 14px;background:var(--bg);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">פריטים</div>
         <table class="items-tbl">
           <thead><tr><th>תיאור</th><th style="text-align:center">כמות</th><th>מחיר</th><th>סה"כ</th></tr></thead>
           <tbody>
-            ${inv.items.map(it=>`<tr>
-              <td>${esc(it.desc)}</td>
+            ${inv.items.map(it => `<tr>
+              <td>${x(it.desc)}</td>
               <td style="text-align:center">${it.qty}</td>
               <td style="direction:ltr">${fmt(it.price)}</td>
-              <td style="direction:ltr;font-weight:700">${fmt(it.qty*it.price)}</td>
+              <td style="direction:ltr">${fmt(it.qty*it.price)}</td>
             </tr>`).join('')}
           </tbody>
         </table>
       </div>
-      <div class="totals">
-        <div class="total-row"><span>סה"כ לפני מע"מ</span><span>${fmt(inv.sub)}</span></div>
-        <div class="total-row"><span>מע"מ 17%</span><span>${fmt(inv.vat)}</span></div>
-        <div class="total-row total-grand"><span>סה"כ לתשלום</span><span>${fmt(inv.total)}</span></div>
+      <div class="totals-wrap">
+        <div class="total-row"><span class="total-lbl">סה"כ לפני מע"מ</span><span class="total-val">${fmt(inv.sub)}</span></div>
+        <div class="total-row"><span class="total-lbl">מע"מ 17%</span><span class="total-val">${fmt(inv.vat)}</span></div>
+        <div class="total-row total-grand"><span class="total-lbl">סה"כ לתשלום</span><span class="total-val">${fmt(inv.total)}</span></div>
       </div>
-      ${inv.notes?`<div class="card" style="padding:12px 14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">הערות</div><div style="font-size:14px">${esc(inv.notes)}</div></div>`:''}
+      ${inv.notes ? `<div class="card" style="padding:12px 14px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:700">הערות</div><div style="font-size:14px">${x(inv.notes)}</div></div>` : ''}
+      <div style="height:20px"></div>
     </div>
   </div>`;
 }
 
+/* ─── SETTINGS ─── */
 function rSettings() {
   return `<div style="height:100%;display:flex;flex-direction:column;overflow:hidden">
     <div class="hdr">
-      <button class="hdr-btn" onclick="go('home')">${ico('back')}</button>
+      <button class="hdr-back" onclick="goBack()">${svgChevron()}</button>
       <div class="hdr-title">הגדרות</div>
     </div>
-    <div class="content">
-      <div class="card" style="margin-top:16px;padding:0">
-        <div class="sett-row"><span class="sett-lbl">מזהה גיליון</span><span class="sett-val">${esc(CFG.SHEET_ID)}</span></div>
-        <div class="sett-row"><span class="sett-lbl">שם הגיליון</span><span class="sett-val">${esc(CFG.TAB_NAME)}</span></div>
-        <div class="sett-row"><span class="sett-lbl">לקוחות במאגר</span><span class="sett-val">${S.customers.length}</span></div>
-        <div class="sett-row"><span class="sett-lbl">סה"כ חשבוניות</span><span class="sett-val">${S.invoices.length}</span></div>
+    <div class="scroll">
+      <div class="card" style="margin-top:14px;padding:0">
+        <div class="srow"><span class="srow-lbl">לשונית גיליון</span><span class="srow-val">${x(CFG.TAB)}</span></div>
+        <div class="srow"><span class="srow-lbl">סה"כ חשבוניות</span><span class="srow-val">${S.invoices.length}</span></div>
+        <div class="srow"><span class="srow-lbl">לקוחות במאגר</span><span class="srow-val">${S.customers.length}</span></div>
+        <div class="srow"><span class="srow-lbl">כתובת סקריפט</span><span class="srow-val">${x(CFG.URL.slice(0,45))}${CFG.URL.length>45?'…':''}</span></div>
       </div>
-      <div class="card" style="padding:14px">
-        <button class="btn-s" onclick="doRefresh()">🔃 רענן נתונים מהגיליון</button>
+      <div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-outline" onclick="doRefresh()">🔃 רענן נתונים מהגיליון</button>
+        <button class="btn btn-danger" onclick="askReset()">🔄 שנה גיליון / הגדרות</button>
       </div>
-      <div class="card" style="padding:14px">
-        <button class="btn-d" onclick="doChangeSheet()">🔄 שנה גיליון / חשבון</button>
-      </div>
-      <div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">מנהל חשבוניות v1.2</div>
+      <div style="text-align:center;padding:24px;color:var(--text3);font-size:11px">מנהל חשבוניות v3.0</div>
     </div>
   </div>`;
 }
 
+/* ─── CUSTOMER MODAL ─── */
+function rCustModal() {
+  const q = S.custSearch.toLowerCase();
+  const res = q ? S.customers.filter(c => c.name.toLowerCase().includes(q) || c.id.includes(q)) : S.customers;
+  filteredCusts = res;
+  return `<div class="sheet-bg" onclick="if(event.target===this)assign({custModal:false,custSearch:''})">
+    <div class="sheet">
+      <div class="sheet-hdr">
+        <span class="sheet-title">בחר לקוח</span>
+        <button class="sheet-x" onclick="assign({custModal:false,custSearch:''})">✕</button>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div class="srch-box">
+          <span class="srch-ico">${svgSearch()}</span>
+          <input id="cust_srch" placeholder="חפש לפי שם העסק או ח.פ..." value="${x(S.custSearch)}" oninput="S.custSearch=this.value;render()">
+        </div>
+      </div>
+      <div class="scroll">
+        ${res.length === 0
+          ? `<div style="padding:28px;text-align:center;color:var(--text3);font-size:14px">${S.custSearch?'לא נמצאו תוצאות':'צור את החשבונית הראשונה — הלקוחות יישמרו אוטומטית'}</div>`
+          : res.map((c,i) => `<div class="cust-item" onclick="pickCust(${i})">
+              <div class="cust-name">${x(c.name)}</div>
+              <div class="cust-meta">ח.פ: ${x(c.id)}${c.phone ? ' · ' + x(c.phone) : ''}</div>
+            </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ─── DIALOG ─── */
 function rDialog() {
   const d = S.dialog;
   return `<div class="dlg-bg">
     <div class="dlg">
-      <div class="dlg-title">${esc(d.title)}</div>
-      <div class="dlg-text">${esc(d.text)}</div>
+      <div class="dlg-title">${x(d.title)}</div>
+      <div class="dlg-body">${x(d.body)}</div>
       <div class="dlg-btns">
-        <button class="btn-s" onclick="dlgCancel&&dlgCancel()">${esc(d.cancel)}</button>
-        <button class="btn-p" onclick="dlgOk&&dlgOk()">${esc(d.ok)}</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="dlgCancel&&dlgCancel()">${x(d.cancel)}</button>
+        <button class="btn btn-primary" style="flex:1" onclick="dlgOk&&dlgOk()">${x(d.ok)}</button>
       </div>
     </div>
   </div>`;
 }
 
-function rCustModal() {
-  const q = S.custSearch.toLowerCase();
-  const res = q ? S.customers.filter(c=>c.name.toLowerCase().includes(q)||c.id.includes(q)) : S.customers;
-  filteredCusts = res;
-  return `<div class="modal-bg" onclick="if(event.target===this)closeCustModal()">
-    <div class="modal">
-      <div class="modal-hdr">
-        <span>בחר לקוח</span>
-        <button onclick="closeCustModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
-      </div>
-      <div class="modal-srch">
-        <input class="finp" id="csrch" placeholder="חפש לפי שם העסק או ח.פ..." value="${esc(S.custSearch)}" oninput="S.custSearch=this.value;render()">
-      </div>
-      <div class="modal-list">
-        ${res.length===0?`<div style="padding:24px;text-align:center;color:var(--muted)">${S.custSearch?'לא נמצאו תוצאות':'אין לקוחות במאגר — צור חשבונית ראשונה'}</div>`
-          :res.map((c,i)=>`<div class="cust-item" onclick="pickCust(${i})">
-            <div class="cust-name">${esc(c.name)}</div>
-            <div class="cust-id">ח.פ: ${esc(c.id)}${c.phone?' | '+esc(c.phone):''}</div>
-          </div>`).join('')}
-      </div>
-    </div>
-  </div>`;
-}
-
-function rToast() {
-  const cls = S.toast.type==='ok'?'toast-ok':S.toast.type==='err'?'toast-err':'';
-  return `<div class="toast ${cls}">${esc(S.toast.msg)}</div>`;
-}
-
-function rSaving() {
-  return `<div class="saving"><div class="saving-box"><div class="spin" style="margin:0 auto 12px"></div><div style="font-weight:700">שומר חשבונית...</div></div></div>`;
-}
-
-/* ─────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    SVG ICONS
-───────────────────────────────────────────── */
-function ico(n) {
-  const icons = {
-    back:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>`,
-    refresh:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.64"/></svg>`,
-    settings:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-    plus:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
-  };
-  return icons[n]||'';
+══════════════════════════════════════════════════════ */
+function svgChevron() { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`; }
+function svgRefresh()  { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.64"/></svg>`; }
+function svgSettings() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`; }
+function svgSearch()   { return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`; }
+function svgPlus()     { return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`; }
+
+/* ══════════════════════════════════════════════════════
+   HANDLERS
+══════════════════════════════════════════════════════ */
+function copyCode() {
+  navigator.clipboard.writeText(GAS_CODE)
+    .then(() => toast('הקוד הועתק ✓', 'ok'))
+    .catch(() => toast('בחר את הקוד ידנית', 'err'));
 }
 
-/* ─────────────────────────────────────────────
-   HANDLERS
-───────────────────────────────────────────── */
-function clearSaved() {
+function clearCfg() {
   localStorage.clear(); sessionStorage.clear();
-  CFG.CLIENT_ID = ''; CFG.SHEET_ID = ''; CFG.TAB_NAME = 'חשבוניות';
-  S.token = null; S.tokenExp = 0; tokenClient = null;
-  render();
+  CFG.URL = ''; CFG.TAB = 'חשבוניות';
+  assign({ invoices:[], customers:[], screen:'setup' });
 }
 
 function doSetup() {
-  const cid = document.getElementById('scid').value.trim();
-  const sid = document.getElementById('ssid').value.trim();
-  const tab = document.getElementById('stab').value.trim() || 'חשבוניות';
-  if (!cid) { toast('נא להזין Client ID', 'err'); return; }
-  if (!sid) { toast('נא להזין Sheet ID', 'err'); return; }
-  CFG.CLIENT_ID = cid; CFG.SHEET_ID = sid; CFG.TAB_NAME = tab;
-  localStorage.setItem('cid', cid); localStorage.setItem('sid', sid); localStorage.setItem('tab', tab);
-  tokenClient = null;
-  go('loading');
-  if (typeof google !== 'undefined') { initTokenClient(); auth(); }
-  else { toast('טוען ספריות Google...'); const t=setInterval(()=>{ if(typeof google!=='undefined'){clearInterval(t);initTokenClient();auth();}},500); setTimeout(()=>clearInterval(t),10000); }
+  const url = (document.getElementById('s_url')?.value || '').trim();
+  const tab = (document.getElementById('s_tab')?.value || '').trim() || 'חשבוניות';
+  if (!url) { toast('נא להזין את כתובת הסקריפט', 'err'); return; }
+  if (!url.startsWith('https://script.google.com')) { toast('הכתובת לא נראית תקינה', 'err'); return; }
+  CFG.URL = url; CFG.TAB = tab;
+  localStorage.setItem('gs_url', url);
+  localStorage.setItem('gs_tab', tab);
+  loadData();
 }
 
 function doRefresh() {
-  sessionStorage.removeItem('ivcache');
-  if (!S.token || Date.now() > S.tokenExp) auth();
-  else loadData(true);
+  sessionStorage.removeItem('inv_cache');
+  loadData();
+}
+
+function askReset() {
+  dlg('איפוס הגדרות?','כל הגדרות החיבור יימחקו','אפס','ביטול',
+    () => { clearCfg(); assign({ dialog:null }); },
+    () => assign({ dialog:null }));
 }
 
 function startNew(type) {
   initForm(type);
-  history.pushState({}, '', '');
   go('new-invoice');
 }
 
 function openInv(num) {
   const inv = S.invoices.find(i => i.num === num);
   if (!inv) return;
-  history.pushState({}, '', '');
-  assign({ screen: 'view-invoice', currentInv: inv });
-}
-
-function backFromForm() {
-  dialog('לצאת ללא שמירה?','השינויים לא יישמרו','צא','המשך עריכה',
-    ()=>assign({screen:'home',dialog:null}), ()=>assign({dialog:null}));
+  S.currentInv = inv;
+  go('view');
 }
 
 function doSave() {
   if (!FORM.biz) { toast('נא להזין שם עסק', 'err'); return; }
-  if (!FORM.items.some(i=>i.desc)) { toast('נא להוסיף לפחות פריט אחד', 'err'); return; }
-  const {sub,vat,total} = calcTotals();
-  const inv = {
+  if (!FORM.items.some(i => i.desc)) { toast('נא להוסיף לפחות פריט אחד', 'err'); return; }
+  const { sub, vat, total } = calcTotals();
+  saveInvoice({
     num:FORM.num, type:FORM.type, date:FORM.date,
     biz:FORM.biz, bizId:FORM.bizId, addr:FORM.addr, phone:FORM.phone,
-    items:FORM.items.filter(i=>i.desc),
-    sub, vat, total, notes:FORM.notes
-  };
-  if (!S.token || Date.now() > S.tokenExp) {
-    toast('מחדש אימות...', 'info');
-    auth(); return;
-  }
-  saveInvoice(inv);
+    items:FORM.items.filter(i=>i.desc), sub, vat, total, notes:FORM.notes,
+  });
 }
 
-function addItem() { if(FORM.items.length<3){FORM.items.push({desc:'',qty:1,price:''});render();} }
-function rmItem(i) { if(FORM.items.length===1){FORM.items[0]={desc:'',qty:1,price:''};}else{FORM.items.splice(i,1);}render(); }
+function addItem()  { if (FORM.items.length < 3) { FORM.items.push({ desc:'', qty:1, price:'' }); render(); } }
+function rmItem(i)  { if (FORM.items.length===1) FORM.items[0]={desc:'',qty:1,price:''}; else FORM.items.splice(i,1); render(); }
+function liveTotal(){ const{sub,vat,total}=calcTotals(); ['t_sub','t_vat','t_tot'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=fmt([sub,vat,total][i]);}); }
+function openCust() { assign({ custModal:true, custSearch:'' }); }
+function pickCust(i){ const c=filteredCusts[i]; if(!c) return; FORM.biz=c.name; FORM.bizId=c.id; FORM.addr=c.addr; FORM.phone=c.phone; assign({ custModal:false, custSearch:'' }); }
 
-function updTotals() {
-  const {sub,vat,total}=calcTotals();
-  const ts=document.getElementById('ts'), tv=document.getElementById('tv'), tt=document.getElementById('tt');
-  if(ts)ts.textContent=fmt(sub); if(tv)tv.textContent=fmt(vat); if(tt)tt.textContent=fmt(total);
-}
-
-function openCustModal() { assign({custModal:true,custSearch:''}); }
-function closeCustModal() { assign({custModal:false,custSearch:''}); }
-
-function pickCust(i) {
-  const c = filteredCusts[i];
-  if (!c) return;
-  FORM.biz=c.name; FORM.bizId=c.id; FORM.addr=c.addr; FORM.phone=c.phone;
-  assign({custModal:false,custSearch:''});
-}
-
-function doChangeSheet() {
-  dialog('שנה גיליון?','כל ההגדרות יאופסו','אפס','ביטול',
-    ()=>{ CFG.CLIENT_ID='';CFG.SHEET_ID='';localStorage.clear();sessionStorage.clear();S.token=null;S.tokenExp=0;assign({dialog:null,screen:'setup',invoices:[],customers:[]}); },
-    ()=>assign({dialog:null})
-  );
-}
-
-/* ─────────────────────────────────────────────
-   INIT
-───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   START
+══════════════════════════════════════════════════════ */
 render();
 </script>
 </body>
